@@ -1,0 +1,114 @@
+$scroll-ns: 'scroll-container';
+$scroll-border-radius: 3px;
+$scroll-thumb-min-size: 36px;
+$scroll-track-size: 12px;
+
+.#{$scroll-ns} {
+	overflow: hidden;
+	position: relative;
+
+	// Smooth scroll related properties
+	&__content-container {
+		transform: translateX( 0 ); /* workaround for safari scrollbar rendering bug */
+		-webkit-overflow-scrolling: touch;
+	}
+
+	// Scroll direction helpers
+	&__vertical .#{$scroll-ns}__content-container {
+		height: 100%;
+		overflow-x: hidden;
+		overflow-y: scroll;
+	}
+	&__horizontal .#{$scroll-ns}__content-container {
+		overflow-x: scroll;
+		overflow-y: hidden;
+		width: 100%;
+	}
+	&__both .#{$scroll-ns}__content-container {
+		height: 100%;
+		overflow: scroll;
+		width: 100%;
+	}
+
+    // Autohide functionality
+    &__autohide .#{$scroll-ns}__track {
+        opacity: 0;
+		// property duration function delay
+		transition: opacity 0.5s ease;
+    }
+    &__autohide:hover, &__forceVisible {
+		.#{$scroll-ns}__track {
+			opacity: 1;
+			transition: none;
+		}
+	}
+
+    // Thumb (draggable element)
+    &__thumb {
+		background: #aaa;
+		background-clip: padding-box;
+		border-radius: $scroll-border-radius;
+		position: relative;
+
+		&-vertical {
+			min-height: $scroll-thumb-min-size;
+			padding: $scroll-border-radius 0;
+			top: 0;
+			width: 100%;
+		}
+
+		&-horizontal {
+			height: 100%;
+			left: 0;
+			min-width: $scroll-thumb-min-size;
+			padding: 0 $scroll-border-radius;
+		}
+    }
+
+    // Track (clickable background)
+    &__track {
+        background-color: rgba(217, 217, 217, 0.1);
+		background-clip: padding-box;
+		border-radius: $scroll-border-radius;
+		pointer-events: none;
+		position: absolute;
+
+		&:hover {
+			background-color: rgba(217, 217, 217, 0.7);
+		}
+
+		&-vertical {
+			bottom: 0;
+			right: 0;
+			transition: background-color 0.25s linear, width 0.3s linear;
+			top: 0;
+			width: $scroll-track-size - 4;
+
+			&:hover {
+				width: $scroll-track-size;
+			}
+		}
+		&-horizontal {
+			bottom: 0;
+			height: $scroll-track-size - 4;
+			left: 0;
+			transition: background-color 0.25s linear, height 0.3s linear;
+			right: 0;
+
+			&:hover {
+				height: $scroll-track-size;
+			}
+		}
+    }
+
+	// If we have to display tracks for both dimensions, we need to create some space
+	// so that they don't overlap in the bottom-right corner
+	&__both {
+		&__track-vertical {
+			bottom: $scroll-track-size;
+		}
+		&__track-horizontal {
+			right: $scroll-track-size;
+		}
+	}
+}
