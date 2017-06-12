@@ -12,7 +12,7 @@ import { debounce, throttle } from 'lodash';
 import ScrollTrack from './ScrollTrack';
 import { BASE_CLASS } from './constants';
 
-const browserScrollbarWidth = scrollbarWidth();
+const browserScrollbarWidth = typeof document === 'undefined' ? 0 : scrollbarWidth();
 
 /**
  * Determine the size of the scroll track given the amount of visible space.  If we're scrolling
@@ -123,7 +123,9 @@ export default class ScrollContainer extends PureComponent {
 	}
 
 	componentDidMount = () => {
-		window.addEventListener( 'resize', this.windowResizeHandler );
+		if ( typeof window !== 'undefined' ) {
+			window.addEventListener( 'resize', this.windowResizeHandler );
+		}
 		const { clientHeight, clientWidth, scrollHeight, scrollWidth } = this.contentContainer;
 		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
 		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
@@ -134,7 +136,9 @@ export default class ScrollContainer extends PureComponent {
 	}
 
 	componentWillUnmount = () => {
-		window.removeEventListener( 'resize', this.windowResizeHandler );
+		if ( typeof window !== 'undefined' ) {
+			window.removeEventListener( 'resize', this.windowResizeHandler );
+		}
 
 		/*
 		There's a possibility that since these functions are the result of currying
