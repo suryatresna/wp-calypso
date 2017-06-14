@@ -6,6 +6,13 @@ import classnames from 'classnames';
 import scrollbarWidth from 'scrollbar-width';
 import { debounce, throttle } from 'lodash';
 
+// tween.js has references to window on its initial run. So, if that doesn't exist,
+// we don't want to import that library.
+let TWEEN = {};
+if ( typeof window !== 'undefined' ) {
+	TWEEN = require( 'tween.js' );
+}
+
 /**
  * Internal Dependencies
  */
@@ -40,7 +47,7 @@ function calcTrackSize( visibleSize, scrollDirection ) {
  */
 function calcThumbSize( visibleSize, totalSize, scrollDirection ) {
 	const visibleSpace = calcTrackSize( visibleSize, scrollDirection );
-	return Math.min( visibleSize / totalSize * visibleSpace, visibleSpace );
+	return Math.min( Math.round( visibleSize / totalSize * visibleSpace ), visibleSpace );
 }
 
 /**
@@ -61,7 +68,7 @@ function calcThumbOffset( visibleSize, totalSize, scrollAmount, scrollDirection 
 	const trackSize = calcTrackSize( visibleSize, totalSize, scrollDirection );
 	const maxOffset = trackSize - thumbSize;
 	const proportionScrolled = scrollAmount / totalSize;
-	return Math.min( trackSize * proportionScrolled, maxOffset );
+	return Math.min( Math.round( trackSize * proportionScrolled ), maxOffset );
 }
 
 /**
@@ -75,7 +82,7 @@ function calcThumbOffset( visibleSize, totalSize, scrollAmount, scrollDirection 
 function throttleToFrame( fn ) {
 	let requestingFrame = false;
 	return ( ...args ) => {
-		if ( ! requestingFrame ) {
+		if ( ! requestingFrame && typeof window !== 'undefined' ) {
 			window.requestAnimationFrame( () => {
 				requestingFrame = false;
 				fn.apply( null, args );
@@ -83,6 +90,19 @@ function throttleToFrame( fn ) {
 			requestingFrame = true;
 		}
 	};
+}
+
+/**
+ * Determine if an event occured at a point on the screen inside the given client rectangle.
+ *
+ * @private
+ * @param {UIEvent} event - The event which occurred.
+ * @param {any} rect - The client rectangle being tested
+ * @returns {Boolean} Whether the event occurred in the client rect
+ */
+function eventInsideRect( event, rect ) {
+	const { clientX, clientY } = event;
+	return rect.left < clientX && rect.right > clientX && rect.top < clientY && rect.bottom > clientY;
 }
 
 /**
@@ -116,6 +136,9 @@ export default class ScrollContainer extends PureComponent {
 			verticalThumbOffset: 0,
 			verticalThumbSize: 0,
 		};
+		this.horizontalTrackRef = c => this.horizontalTrack = c;
+		this.verticalTrackRef = c => this.verticalTrack = c;
+
 		this.contentScrollHandler = throttleToFrame( this.contentScrollHandler );
 		this.contentUpdateHandler = throttle( this.updateThumb, 100, { leading: false } );
 		this.scrollComplete = debounce( this.autoHideAfterScroll, 333 );
@@ -135,10 +158,19 @@ export default class ScrollContainer extends PureComponent {
 		} );
 	}
 
+	autoHideAfterScroll = () => {
+		if ( this.props.autoHide ) {
+			this.setState( { forceVisible: false } );
+		}
+	}
+
 	componentWillUnmount = () => {
 		if ( typeof window !== 'undefined' ) {
 			window.removeEventListener( 'resize', this.windowResizeHandler );
 		}
+
+		// Just to be safe
+		this.stopScrolling();
 
 		/*
 		There's a possibility that since these functions are the result of currying
@@ -157,15 +189,99 @@ export default class ScrollContainer extends PureComponent {
 		this.autoHideAfterScroll();
 	}
 
+	/**
+	 * If the user clicks on a scroll track, but outside of its associated scroll thumb,
+	 * we need to either increase or decrease the amount of scrolling by a single "page".
+	 *
+	 * @private
+	 * @param {MouseEvent} event - The click event triggered in the UI
+	 * @memberof ScrollContainer
+	 */
+	scrollIfClickOnTrack = event => {
+		const { clientX, clientY } = event;
+		const { clientHeight, clientWidth, scrollTop, scrollLeft } = this.contentContainer;
+
+		let clickedInVerticalTrack = false;
+		let verticalTrackRect = null;
+
+		if ( this.verticalTrack != null ) {
+			verticalTrackRect = this.verticalTrack.getBoundingClientRect();
+			clickedInVerticalTrack = eventInsideRect( event, verticalTrackRect );
+		}
+		if ( clickedInVerticalTrack ) {
+			event.preventDefault();
+			event.stopPropagation();
+			const { verticalThumbOffset, verticalThumbSize } = this.state;
+			const clickedBelowThumb = clientY > verticalTrackRect.top + verticalThumbOffset + verticalThumbSize;
+			const clickedAboveThumb = clientY < verticalTrackRect.top + verticalThumbOffset;
+			if ( clickedAboveThumb || clickedBelowThumb ) {
+				const scrollYTarget = clickedAboveThumb ? scrollTop - clientHeight : scrollTop + clientHeight;
+				this.scrollTo( scrollLeft, scrollYTarget );
+			}
+		} else if ( this.horizontalTrack != null ) {
+			const horizontalTrackRect = this.verticalTrack.getBoundingClientRect();
+			const clickedInHorizontalTrack = eventInsideRect( event, horizontalTrackRect );
+			if ( clickedInHorizontalTrack ) {
+				event.preventDefault();
+				event.stopPropagation();
+				const { horizontalThumbOffset, horizontalThumbSize } = this.state;
+				const clickedLeftThumb = clientX > horizontalTrackRect.left + horizontalThumbOffset + horizontalThumbSize;
+				const clickedRightThumb = clientX < horizontalTrackRect.left + horizontalThumbOffset;
+				if ( clickedRightThumb || clickedLeftThumb ) {
+					const scrollXTarget = clickedRightThumb ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+					this.scrollTo( scrollTop, scrollXTarget );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Scroll the contentes of this container to the given x/y coordinates.
+	 *
+	 * @private
+	 * @param {Number} x - The amount of desired horizontal scrolling
+	 * @param {Number} y - The amount of desired vertical scrolling
+	 * @memberof ScrollContainer
+	 */
+	scrollTo = ( x, y ) => {
+		this.stopScrolling();
+		this.scrolling = true;
+		const scrollContainer = this;
+		this.scrollTween = new TWEEN.Tween( {
+			x: this.contentContainer.scrollLeft || 0,
+			y: this.contentContainer.scrollTop || 0,
+		} )
+		.to( {
+			x: Math.max( x || 0, 0 ),
+			y: Math.max( y || 0, 0 ),
+		}, 75 )
+		.onUpdate( function() {
+			scrollContainer.contentContainer.scrollTop = this.y;
+			scrollContainer.contentContainer.scrollLeft = this.x;
+		} )
+		.easing( TWEEN.Easing.Linear.None )
+		.interpolation( TWEEN.Interpolation.Bezier )
+		.onComplete( () => this.scrolling = false )
+		.start();
+		const tweenUpdateFn = time => {
+			if ( this.scrolling ) {
+				TWEEN.update( time );
+				requestAnimationFrame( tweenUpdateFn );
+			}
+		};
+		requestAnimationFrame( tweenUpdateFn );
+	}
+
+	stopScrolling = () => {
+		if ( this.scrollTween != null ) {
+			this.scrollTween.stop();
+		}
+		this.scrolling = false;
+	}
+
 	updateThumb = () => {
 		this.updateScrollBarSize();
 		this.updateScrollPosition();
-	}
-
-	autoHideAfterScroll = () => {
-		if ( this.props.autoHide ) {
-			this.setState( { forceVisible: false } );
-		}
 	}
 
 	updateScrollBarSize = () => {
@@ -205,7 +321,7 @@ export default class ScrollContainer extends PureComponent {
 		const showHorizontalScrollbar = direction !== 'vertical';
 		const browserScrollbarPadding = `-${ browserScrollbarWidth }px`;
 		const classes = classnames( BASE_CLASS, `${ BASE_CLASS }__${ direction }`, className, {
-			[ `${ BASE_CLASS }__autohide` ]: autoHide,
+			[ `${ BASE_CLASS }-autohide` ]: autoHide,
 			[ `${ BASE_CLASS }__force-visible` ]: forceVisible,
 		} );
 		const scrollbarClipStyles = {
@@ -219,6 +335,7 @@ export default class ScrollContainer extends PureComponent {
 					className={ `${ BASE_CLASS }__content-container` }
 					onScroll={ this.contentScrollHandler }
 					onClick={ this.contentUpdateHandler }
+					onClickCapture={ this.scrollIfClickOnTrack }
 					onKeyDown={ this.contentUpdateHandler }
 					style={ scrollbarClipStyles }
 				>
@@ -228,6 +345,7 @@ export default class ScrollContainer extends PureComponent {
 					showVerticalScrollbar
 					? <ScrollTrack
 						direction="vertical"
+						refFn={ this.verticalTrackRef }
 						thumbSize={ verticalThumbSize }
 						thumbOffset={ verticalThumbOffset }
 					/>
@@ -237,6 +355,7 @@ export default class ScrollContainer extends PureComponent {
 					showHorizontalScrollbar
 					? <ScrollTrack
 						direction="horizontal"
+						refFn={ this.horizontalTrackRef }
 						thumbSize={ horizontalThumbSize }
 						thumbOffset={ horizontalThumbOffset }
 					/>

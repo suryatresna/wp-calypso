@@ -31,12 +31,12 @@ $scroll-track-size: 12px;
 	}
 
     // Autohide functionality
-    &__autohide .#{$scroll-ns}__track {
+    &-autohide .#{$scroll-ns}__track {
         opacity: 0;
 		// property duration function delay
 		transition: opacity 0.5s ease;
     }
-    &__autohide:hover, &__forceVisible {
+    &-autohide:hover, &__forceVisible {
 		.#{$scroll-ns}__track {
 			opacity: 1;
 			transition: none;
@@ -48,6 +48,7 @@ $scroll-track-size: 12px;
 		background: #aaa;
 		background-clip: padding-box;
 		border-radius: $scroll-border-radius;
+		box-sizing: border-box;
 		position: relative;
 
 		&-vertical {
@@ -70,6 +71,7 @@ $scroll-track-size: 12px;
         background-color: rgba(217, 217, 217, 0.1);
 		background-clip: padding-box;
 		border-radius: $scroll-border-radius;
+		box-sizing: border-box;
 		pointer-events: none;
 		position: absolute;
 
