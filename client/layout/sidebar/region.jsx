@@ -9,12 +9,23 @@ import classNames from 'classnames';
  */
 import ScrollContainer from 'components/scroll-container';
 
-const SidebarRegion = ( { children, className } ) => (
-	<ScrollContainer direction="vertical" autoHide>
-		<div className={ classNames( 'sidebar__region', className ) }>
+const config = require( 'config' );
+
+const SidebarRegion = ( { children, className } ) => {
+	const useCustomScrollbars = config.isEnabled( 'custom-scrollbars' );
+	const region = (
+		<div className={ classNames( 'sidebar__region', className, { 'sidebar__region-scrolls': ! useCustomScrollbars } ) }>
 			{ children }
 		</div>
-	</ScrollContainer>
-);
+	);
+	if ( useCustomScrollbars ) {
+		return (
+			<ScrollContainer direction="vertical" autoHide>
+				{ region }
+			</ScrollContainer>
+		);
+	}
+	return region;
+};
 
 export default SidebarRegion;
