@@ -2,6 +2,7 @@
  * External Dependencies
  */
 import React, { PropTypes, PureComponent } from 'react';
+import classnames from 'classnames';
 
 /**
  * Internal Dependencies
@@ -10,7 +11,7 @@ import { BASE_CLASS } from './constants';
 
 export default class ScrollTrack extends PureComponent {
 	render() {
-		const { direction, thumbOffset, thumbSize } = this.props;
+		const { className, direction, thumbOffset, thumbSize } = this.props;
 		const isVertical = direction === 'vertical';
 		const isHorizontal = direction === 'horizontal';
 		const thumbStyles = {
@@ -19,8 +20,9 @@ export default class ScrollTrack extends PureComponent {
 			top: isVertical ? `${ thumbOffset }px` : '',
 			width: isHorizontal ? `${ thumbSize }px` : '',
 		};
+		const trackClasses = classnames( `${ BASE_CLASS }__track ${ BASE_CLASS }__track-${ direction }`, className );
 		return (
-			<div ref={ this.props.refFn } className={ `${ BASE_CLASS }__track ${ BASE_CLASS }__track-${ direction }` }>
+			<div ref={ this.props.refFn } className={ trackClasses }>
 				<div
 					className={ `${ BASE_CLASS }__thumb ${ BASE_CLASS }__thumb-${ direction }` }
 					style={ thumbStyles }
@@ -31,6 +33,7 @@ export default class ScrollTrack extends PureComponent {
 }
 
 ScrollTrack.propTypes = {
+	className: PropTypes.string,
 	direction: PropTypes.oneOf( [ 'vertical', 'horizontal' ] ),
 	refFn: PropTypes.func,
 	thumbOffset: PropTypes.number.isRequired,

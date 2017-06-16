@@ -133,16 +133,55 @@ export default class ScrollContainer extends PureComponent {
 			forceVisible: ! this.props.autoHide,
 			horizontalThumbOffset: 0,
 			horizontalThumbSize: 0,
+			horizontalTrackHeight: 0,
+			horizontalTrackHovered: false,
 			verticalThumbOffset: 0,
 			verticalThumbSize: 0,
+			verticalTrackWidth: 0,
+			verticalTrackHovered: false,
 		};
 		this.horizontalTrackRef = c => this.horizontalTrack = c;
 		this.verticalTrackRef = c => this.verticalTrack = c;
 
 		this.contentScrollHandler = throttleToFrame( this.contentScrollHandler );
 		this.contentUpdateHandler = throttle( this.updateThumb, 100, { leading: false } );
+		this.coordinatesOverTrack = debounce( this.coordinatesOverTrack, 50, { leading: true, trailing: true } );
+		this.trackMouse = event => {
+			const { clientX, clientY } = event;
+			this.coordinatesOverTrack( clientX, clientY );
+		};
 		this.scrollComplete = debounce( this.autoHideAfterScroll, 333 );
 		this.windowResizeHandler = throttleToFrame( this.updateThumb );
+	}
+
+	autoHideAfterScroll = () => {
+		if ( this.props.autoHide ) {
+			this.setState( { forceVisible: false } );
+		}
+	}
+
+	calculateTrackRectangles = () => {
+		const newState = {};
+		if ( this.horizontalTrack != null ) {
+			newState.horizontalTrackRect = this.horizontalTrack.getBoundingClientRect();
+		}
+		if ( this.verticalTrack != null ) {
+			newState.verticalTrackRect = this.verticalTrack.getBoundingClientRect();
+		}
+
+		if (
+			( newState.horizontalTrackRect !== undefined && newState.horizontalTrackRect.height > 0 ) ||
+			( newState.verticalTrackRect !== undefined && newState.verticalTrackRect.width > 0 )
+		) {
+			this.setState( newState );
+		}
+	}
+
+	clearTrackRectangles = () => {
+		this.setState( {
+			horizontalTrackRect: null,
+			verticalTrackRect: null,
+		} );
 	}
 
 	componentDidMount = () => {
@@ -150,17 +189,20 @@ export default class ScrollContainer extends PureComponent {
 			window.addEventListener( 'resize', this.windowResizeHandler );
 		}
 		const { clientHeight, clientWidth, scrollHeight, scrollWidth } = this.contentContainer;
-		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
 		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
+		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
 		this.setState( {
+			horizontalThumbSize,
 			verticalThumbSize,
-			horizontalThumbSize
 		} );
 	}
 
-	autoHideAfterScroll = () => {
-		if ( this.props.autoHide ) {
-			this.setState( { forceVisible: false } );
+	componentDidUpdate( prevProps, prevState ) {
+		if (
+			prevState.verticalTrackHovered !== this.state.verticalTrackHovered ||
+			prevState.horizontalTrackHovered !== this.state.horizontalTrackHovered
+		) {
+			this.calculateTrackRectangles();
 		}
 	}
 
@@ -187,6 +229,27 @@ export default class ScrollContainer extends PureComponent {
 	contentScrollHandler = () => {
 		this.updateScrollPosition();
 		this.autoHideAfterScroll();
+	}
+
+	/**
+	 * Determine if a given set of X/Y client coordinates is on top of a visible scrollbar track.
+	 *
+	 * @public
+	 * @param {Number} x - X Coordinate
+	 * @param {Number} y - Y Coordinate
+	 * @memberof ScrollContainer
+	 */
+	coordinatesOverTrack = ( x, y ) => {
+		const { horizontalTrackRect, verticalTrackRect } = this.state;
+		if ( horizontalTrackRect == null && verticalTrackRect == null ) {
+			this.calculateTrackRectangles();
+		} else {
+			const fakeEvent = { clientX: x, clientY: y };
+			this.setState( {
+				verticalTrackHovered: verticalTrackRect == null ? false : eventInsideRect( fakeEvent, verticalTrackRect ),
+				horizontalTrackHovered: horizontalTrackRect == null ? false : eventInsideRect( fakeEvent, horizontalTrackRect ),
+			} );
+		}
 	}
 
 	/**
@@ -244,39 +307,42 @@ export default class ScrollContainer extends PureComponent {
 	 * @memberof ScrollContainer
 	 */
 	scrollTo = ( x, y ) => {
-		this.stopScrolling();
-		this.scrolling = true;
-		const scrollContainer = this;
-		this.scrollTween = new TWEEN.Tween( {
-			x: this.contentContainer.scrollLeft || 0,
-			y: this.contentContainer.scrollTop || 0,
-		} )
-		.to( {
-			x: Math.max( x || 0, 0 ),
-			y: Math.max( y || 0, 0 ),
-		}, 75 )
-		.onUpdate( function() {
-			scrollContainer.contentContainer.scrollTop = this.y;
-			scrollContainer.contentContainer.scrollLeft = this.x;
-		} )
-		.easing( TWEEN.Easing.Linear.None )
-		.interpolation( TWEEN.Interpolation.Bezier )
-		.onComplete( () => this.scrolling = false )
-		.start();
-		const tweenUpdateFn = time => {
-			if ( this.scrolling ) {
-				TWEEN.update( time );
-				requestAnimationFrame( tweenUpdateFn );
-			}
-		};
-		requestAnimationFrame( tweenUpdateFn );
+		if ( this.scrollTween != null ) {
+			this.scrollTween.stop();
+		}
+		this.setState( { scrolling: true }, () => {
+			const scrollContainer = this;
+			this.scrollTween = new TWEEN.Tween( {
+				x: this.contentContainer.scrollLeft || 0,
+				y: this.contentContainer.scrollTop || 0,
+			} )
+			.to( {
+				x: Math.max( x || 0, 0 ),
+				y: Math.max( y || 0, 0 ),
+			}, 75 )
+			.onUpdate( function() {
+				scrollContainer.contentContainer.scrollTop = this.y;
+				scrollContainer.contentContainer.scrollLeft = this.x;
+			} )
+			.easing( TWEEN.Easing.Linear.None )
+			.interpolation( TWEEN.Interpolation.Bezier )
+			.onComplete( () => this.setState( { scrolling: true } ) )
+			.start();
+			const tweenUpdateFn = time => {
+				if ( this.state.scrolling ) {
+					TWEEN.update( time );
+					requestAnimationFrame( tweenUpdateFn );
+				}
+			};
+			requestAnimationFrame( tweenUpdateFn );
+		} );
 	}
 
 	stopScrolling = () => {
 		if ( this.scrollTween != null ) {
 			this.scrollTween.stop();
 		}
-		this.scrolling = false;
+		this.setState( { scrolling: false } );
 	}
 
 	updateThumb = () => {
@@ -314,8 +380,11 @@ export default class ScrollContainer extends PureComponent {
 			forceVisible,
 			horizontalThumbOffset,
 			horizontalThumbSize,
+			horizontalTrackHovered,
+			scrolling,
 			verticalThumbOffset,
 			verticalThumbSize,
+			verticalTrackHovered,
 		} = this.state;
 		const showVerticalScrollbar = direction !== 'horizontal';
 		const showHorizontalScrollbar = direction !== 'vertical';
@@ -337,6 +406,9 @@ export default class ScrollContainer extends PureComponent {
 					onClick={ this.contentUpdateHandler }
 					onClickCapture={ this.scrollIfClickOnTrack }
 					onKeyDown={ this.contentUpdateHandler }
+					onMouseEnter={ this.calculateTrackRectangles }
+					onMouseMove={ scrolling ? null : this.trackMouse }
+					onMouseLeave={ this.clearTrackRectangles }
 					style={ scrollbarClipStyles }
 				>
 					{ children }
@@ -344,6 +416,7 @@ export default class ScrollContainer extends PureComponent {
 				{
 					showVerticalScrollbar
 					? <ScrollTrack
+						className={ verticalTrackHovered ? `${ BASE_CLASS }-is-hovered` : null }
 						direction="vertical"
 						refFn={ this.verticalTrackRef }
 						thumbSize={ verticalThumbSize }
@@ -354,6 +427,7 @@ export default class ScrollContainer extends PureComponent {
 				{
 					showHorizontalScrollbar
 					? <ScrollTrack
+						className={ horizontalTrackHovered ? `${ BASE_CLASS }-is-hovered` : null }
 						direction="horizontal"
 						refFn={ this.horizontalTrackRef }
 						thumbSize={ horizontalThumbSize }

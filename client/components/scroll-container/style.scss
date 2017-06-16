@@ -2,6 +2,8 @@ $scroll-ns: 'scroll-container';
 $scroll-border-radius: 3px;
 $scroll-thumb-min-size: 36px;
 $scroll-track-size: 12px;
+$scroll-opacity-transition: opacity 0.5s ease;
+$scroll-width-transition: width 0.15s linear;
 
 .#{$scroll-ns} {
 	overflow: hidden;
@@ -34,12 +36,12 @@ $scroll-track-size: 12px;
     &-autohide .#{$scroll-ns}__track {
         opacity: 0;
 		// property duration function delay
-		transition: opacity 0.5s ease;
+		transition: $scroll-opacity-transition, $scroll-width-transition;
     }
     &-autohide:hover, &__forceVisible {
 		.#{$scroll-ns}__track {
 			opacity: 1;
-			transition: none;
+			transition: $scroll-width-transition;
 		}
 	}
 
@@ -75,7 +77,7 @@ $scroll-track-size: 12px;
 		pointer-events: none;
 		position: absolute;
 
-		&:hover {
+		&.#{$scroll-ns}-is-hovered {
 			background-color: rgba(217, 217, 217, 0.7);
 		}
 
@@ -86,7 +88,7 @@ $scroll-track-size: 12px;
 			top: 0;
 			width: $scroll-track-size - 4;
 
-			&:hover {
+			&.#{$scroll-ns}-is-hovered {
 				width: $scroll-track-size;
 			}
 		}
@@ -97,7 +99,7 @@ $scroll-track-size: 12px;
 			transition: background-color 0.25s linear, height 0.3s linear;
 			right: 0;
 
-			&:hover {
+			&.#{$scroll-ns}-is-hovered {
 				height: $scroll-track-size;
 			}
 		}
