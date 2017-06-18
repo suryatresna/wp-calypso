@@ -1,7 +1,7 @@
 $scroll-ns: 'scroll-container';
 $scroll-border-radius: 3px;
 $scroll-thumb-min-size: 36px;
-$scroll-track-size: 12px;
+$scroll-track-size: 10px;
 $scroll-opacity-transition: opacity 0.5s ease;
 $scroll-width-transition: width 0.15s linear;
 
@@ -32,13 +32,18 @@ $scroll-width-transition: width 0.15s linear;
 		width: 100%;
 	}
 
+	&-dragging {
+		cursor: initial !important;
+		user-select: none;
+	}
+
     // Autohide functionality
     &-autohide .#{$scroll-ns}__track {
         opacity: 0;
 		// property duration function delay
 		transition: $scroll-opacity-transition, $scroll-width-transition;
     }
-    &-autohide:hover, &__forceVisible {
+    &-autohide:hover, &__force-visible {
 		.#{$scroll-ns}__track {
 			opacity: 1;
 			transition: $scroll-width-transition;
@@ -52,6 +57,14 @@ $scroll-width-transition: width 0.15s linear;
 		border-radius: $scroll-border-radius;
 		box-sizing: border-box;
 		position: relative;
+
+		&.#{$scroll-ns}-is-hovered {
+			background: #666;
+		}
+
+		.#{$scroll-ns}-dragging & {
+			background: #444;
+		}
 
 		&-vertical {
 			min-height: $scroll-thumb-min-size;
@@ -77,6 +90,8 @@ $scroll-width-transition: width 0.15s linear;
 		pointer-events: none;
 		position: absolute;
 
+		// Since the track has "pointer-events: none", a class gets added for the
+		// "hover" state
 		&.#{$scroll-ns}-is-hovered {
 			background-color: rgba(217, 217, 217, 0.7);
 		}
@@ -88,6 +103,8 @@ $scroll-width-transition: width 0.15s linear;
 			top: 0;
 			width: $scroll-track-size - 4;
 
+			// Since the track has "pointer-events: none", a class gets added for the
+			// "hover" state
 			&.#{$scroll-ns}-is-hovered {
 				width: $scroll-track-size;
 			}
@@ -99,6 +116,8 @@ $scroll-width-transition: width 0.15s linear;
 			transition: background-color 0.25s linear, height 0.3s linear;
 			right: 0;
 
+			// Since the track has "pointer-events: none", a class gets added for the
+			// "hover" state
 			&.#{$scroll-ns}-is-hovered {
 				height: $scroll-track-size;
 			}

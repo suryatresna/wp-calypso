@@ -3,7 +3,6 @@
  */
 import React, { PropTypes, PureComponent } from 'react';
 import classnames from 'classnames';
-import scrollbarWidth from 'scrollbar-width';
 import { debounce, throttle } from 'lodash';
 
 // tween.js has references to window on its initial run. So, if that doesn't exist,
@@ -18,92 +17,8 @@ if ( typeof window !== 'undefined' ) {
  */
 import ScrollTrack from './ScrollTrack';
 import { BASE_CLASS } from './constants';
-
-const browserScrollbarWidth = typeof document === 'undefined' ? 0 : scrollbarWidth();
-
-/**
- * Determine the size of the scroll track given the amount of visible space.  If we're scrolling
- * in both dimensions, the track has to be a bit shorter to prevent overlap of the two tracks.
- *
- * @private
- * @param {Number} visibleSize - The number of visible pixels in the direction you care about
- * @param {Number} scrollDirection - The direction in which the user is allowed to scroll
- * @returns {Number} The size of the scroll track in pixels
- */
-function calcTrackSize( visibleSize, scrollDirection ) {
-	return scrollDirection === 'both' ? visibleSize - browserScrollbarWidth : visibleSize;
-}
-
-/**
- * Determine the size of the scroll thumb (draggable element of the scroll bar) given the
- * amount of visible space and total size of content along a dimension.  The direction the
- * user is allowed to scroll is also needed, due to the restricted amount of available space
- * for the thumb to traverse on the track if the user is allowed to scroll in both dimensions.
- * @private
- * @param {Number} visibleSize - The number of visible pixels in the direction you care about
- * @param {Number} totalSize - The total number of pixels that the content takes up
- * @param {'vertical'|horizontal'|'both'} scrollDirection - The direction in which the user is allowed to scroll
- * @returns {Number} The size of the thumb in pixels
- */
-function calcThumbSize( visibleSize, totalSize, scrollDirection ) {
-	const visibleSpace = calcTrackSize( visibleSize, scrollDirection );
-	return Math.min( Math.round( visibleSize / totalSize * visibleSpace ), visibleSpace );
-}
-
-/**
- * Determine the pixel offset of the thumb from the base of the track given how much the
- * user has scrolled.  The direction the user is allowed to scroll is also needed, due to
- * the restricted amount of available space for the thumb to traverse on the track if the
- * user is allowed to scroll in both dimensions.
- *
- * @private
- * @param {Number} visibleSize - The number of visible pixels in the direction you care about
- * @param {Number} totalSize - The total number of pixels that the content takes up
- * @param {Number} scrollAmount - The number of pixels the user has scrolled in a given dimension
- * @param {'vertical'|'horizontal'|'both'} scrollDirection - The direction in which the user is allowed to scroll
- * @returns {Number} The offset of the thumb from the track base in pixels
- */
-function calcThumbOffset( visibleSize, totalSize, scrollAmount, scrollDirection ) {
-	const thumbSize = calcThumbSize( visibleSize, totalSize, scrollDirection );
-	const trackSize = calcTrackSize( visibleSize, totalSize, scrollDirection );
-	const maxOffset = trackSize - thumbSize;
-	const proportionScrolled = scrollAmount / totalSize;
-	return Math.min( Math.round( trackSize * proportionScrolled ), maxOffset );
-}
-
-/**
- * Curry a function which will ensure that the passed function is only executed once per
- * animation frame.
- *
- * @private
- * @param {Function} fn - The function which needs to be executed in the animation frame
- * @returns {Function} A function that can be called any number of times
- */
-function throttleToFrame( fn ) {
-	let requestingFrame = false;
-	return ( ...args ) => {
-		if ( ! requestingFrame && typeof window !== 'undefined' ) {
-			window.requestAnimationFrame( () => {
-				requestingFrame = false;
-				fn.apply( null, args );
-			} );
-			requestingFrame = true;
-		}
-	};
-}
-
-/**
- * Determine if an event occured at a point on the screen inside the given client rectangle.
- *
- * @private
- * @param {UIEvent} event - The event which occurred.
- * @param {any} rect - The client rectangle being tested
- * @returns {Boolean} Whether the event occurred in the client rect
- */
-function eventInsideRect( event, rect ) {
-	const { clientX, clientY } = event;
-	return rect.left < clientX && rect.right > clientX && rect.top < clientY && rect.bottom > clientY;
-}
+import { throttleToFrame, eventInsideRect } from './helpers/events';
+import { calcThumbSize, calcThumbOffset, browserScrollbarWidth } from './helpers/dimensions';
 
 /**
  * This component will wrap content and create custom scroll bars for said content.  Due to requirements
@@ -130,11 +45,14 @@ export default class ScrollContainer extends PureComponent {
 	constructor( props ) {
 		super( props );
 		this.state = {
+			draggingThumb: false,
 			forceVisible: ! this.props.autoHide,
+			horizontalThumbHovered: false,
 			horizontalThumbOffset: 0,
 			horizontalThumbSize: 0,
 			horizontalTrackHeight: 0,
 			horizontalTrackHovered: false,
+			verticalThumbHovered: false,
 			verticalThumbOffset: 0,
 			verticalThumbSize: 0,
 			verticalTrackWidth: 0,
@@ -146,16 +64,79 @@ export default class ScrollContainer extends PureComponent {
 		this.contentScrollHandler = throttleToFrame( this.contentScrollHandler );
 		this.contentUpdateHandler = throttle( this.updateThumb, 100, { leading: false } );
 		this.coordinatesOverTrack = debounce( this.coordinatesOverTrack, 50, { leading: true, trailing: true } );
-		this.trackMouse = event => {
+		this.scrollByDragging = throttleToFrame( this.scrollByDragging );
+		this.scrollComplete = debounce( this.autoHideAfterScroll, 333 );
+		this.windowResizeHandler = throttleToFrame( this.updateThumb );
+
+		this.dragThumb = event => {
+			const { clientX, clientY } = event;
+			this.scrollByDragging( clientX, clientY );
+		};
+		this.trackMouseForHover = event => {
 			const { clientX, clientY } = event;
 			this.coordinatesOverTrack( clientX, clientY );
 		};
-		this.scrollComplete = debounce( this.autoHideAfterScroll, 333 );
-		this.windowResizeHandler = throttleToFrame( this.updateThumb );
+	}
+
+	componentDidMount = () => {
+		if ( typeof window !== 'undefined' ) {
+			window.addEventListener( 'resize', this.windowResizeHandler );
+		}
+		const { clientHeight, clientWidth, scrollHeight, scrollWidth } = this.contentContainer;
+		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
+		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
+		this.setState( {
+			horizontalThumbSize,
+			verticalThumbSize,
+		} );
+	}
+
+	componentDidUpdate( prevProps, prevState ) {
+		if (
+			prevState.verticalTrackHovered !== this.state.verticalTrackHovered ||
+			prevState.horizontalTrackHovered !== this.state.horizontalTrackHovered
+		) {
+			this.calculateTrackRectangles();
+		}
+
+		if ( typeof window !== 'undefined' && prevState.draggingThumb !== this.state.draggingThumb ) {
+			if ( this.state.draggingThumb ) {
+				window.addEventListener( 'mousemove', this.dragThumb );
+				window.addEventListener( 'mouseup', this.stopDragging );
+			} else {
+				window.removeEventListener( 'mousemove', this.dragThumb );
+				window.removeEventListener( 'mouseup', this.stopDragging );
+			}
+		}
+	}
+
+	componentWillUnmount = () => {
+		if ( typeof window !== 'undefined' ) {
+			window.removeEventListener( 'mousemove', this.dragThumb );
+			window.removeEventListener( 'mouseup', this.stopDragging );
+			window.removeEventListener( 'resize', this.windowResizeHandler );
+		}
+
+		// Just to be safe
+		this.stopScrolling();
+
+		/*
+		There's a possibility that since these functions are the result of currying
+		another function which has the initial function which is boudn to the component
+		instance in the scope chain, the curried function will keep the component in
+		memory even after the component is unmounted.  Since this is inexpensive,
+		let's just assign over these to prevent memory leaks.
+		*/
+		this.contentScrollHandler = null;
+		this.contentUpdateHandler = null;
+		this.coordinatesOverTrack = null;
+		this.scrollComplete = null;
+		this.scrollByDragging = null;
+		this.windowResizeHandler = null;
 	}
 
 	autoHideAfterScroll = () => {
-		if ( this.props.autoHide ) {
+		if ( this.props.autoHide && ! this.state.draggingThumb ) {
 			this.setState( { forceVisible: false } );
 		}
 	}
@@ -184,48 +165,6 @@ export default class ScrollContainer extends PureComponent {
 		} );
 	}
 
-	componentDidMount = () => {
-		if ( typeof window !== 'undefined' ) {
-			window.addEventListener( 'resize', this.windowResizeHandler );
-		}
-		const { clientHeight, clientWidth, scrollHeight, scrollWidth } = this.contentContainer;
-		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
-		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
-		this.setState( {
-			horizontalThumbSize,
-			verticalThumbSize,
-		} );
-	}
-
-	componentDidUpdate( prevProps, prevState ) {
-		if (
-			prevState.verticalTrackHovered !== this.state.verticalTrackHovered ||
-			prevState.horizontalTrackHovered !== this.state.horizontalTrackHovered
-		) {
-			this.calculateTrackRectangles();
-		}
-	}
-
-	componentWillUnmount = () => {
-		if ( typeof window !== 'undefined' ) {
-			window.removeEventListener( 'resize', this.windowResizeHandler );
-		}
-
-		// Just to be safe
-		this.stopScrolling();
-
-		/*
-		There's a possibility that since these functions are the result of currying
-		another function which has the initial function which is boudn to the component
-		instance in the scope chain, the curried function will keep the component in
-		memory even after the component is unmounted.  Since this is inexpensive,
-		let's just assign over these to prevent memory leaks.
-		*/
-		this.contentScrollHandler = null;
-		this.windowResizeHandler = null;
-		this.scrollComplete = null;
-	}
-
 	contentScrollHandler = () => {
 		this.updateScrollPosition();
 		this.autoHideAfterScroll();
@@ -234,7 +173,7 @@ export default class ScrollContainer extends PureComponent {
 	/**
 	 * Determine if a given set of X/Y client coordinates is on top of a visible scrollbar track.
 	 *
-	 * @public
+	 * @private
 	 * @param {Number} x - X Coordinate
 	 * @param {Number} y - Y Coordinate
 	 * @memberof ScrollContainer
@@ -245,11 +184,50 @@ export default class ScrollContainer extends PureComponent {
 			this.calculateTrackRectangles();
 		} else {
 			const fakeEvent = { clientX: x, clientY: y };
+			const verticalTrackHovered = verticalTrackRect == null ? false : eventInsideRect( fakeEvent, verticalTrackRect );
+			const horizontalTrackHovered = horizontalTrackRect == null ? false : eventInsideRect( fakeEvent, horizontalTrackRect );
+			let verticalThumbHovered = false;
+			let horizontalThumbHovered = false;
+			if ( verticalTrackHovered ) {
+				const thumbTop = verticalTrackRect.top + this.state.verticalThumbOffset;
+				verticalThumbHovered = x >= thumbTop && x <= thumbTop + this.state.verticalThumbSize;
+			}
+			if ( horizontalTrackHovered ) {
+				const thumbLeft = horizontalTrackRect.left + this.state.horizontalThumbOffset;
+				horizontalThumbHovered = y >= thumbLeft && y <= thumbLeft + this.state.horizontalThumbSize;
+			}
 			this.setState( {
-				verticalTrackHovered: verticalTrackRect == null ? false : eventInsideRect( fakeEvent, verticalTrackRect ),
-				horizontalTrackHovered: horizontalTrackRect == null ? false : eventInsideRect( fakeEvent, horizontalTrackRect ),
+				horizontalThumbHovered,
+				horizontalTrackHovered,
+				verticalThumbHovered,
+				verticalTrackHovered,
 			} );
 		}
+	}
+
+	scrollByDragging = ( clientX, clientY ) => {
+		let scrollProperty = 'scrollTop';
+		let currentPosition = clientY;
+		if ( this.state.horizontalTrackHovered ) {
+			scrollProperty = 'scrollLeft';
+			currentPosition = clientX;
+		}
+
+		const { clientHeight, scrollHeight } = this.contentContainer;
+		const trackDiff = currentPosition - this.state.dragStartPosition;
+		const scrollDiff = scrollHeight / clientHeight * trackDiff;
+		this.contentContainer[ scrollProperty ] = this.state.startingScrollPosition + scrollDiff;
+	}
+
+	stopDragging = event => {
+		event.preventDefault();
+		event.stopPropagation();
+		this.setState( {
+			draggingThumb: false,
+			dragStartPosition: null,
+			forceVisible: false,
+			startingScrollPosition: null,
+		} );
 	}
 
 	/**
@@ -257,21 +235,15 @@ export default class ScrollContainer extends PureComponent {
 	 * we need to either increase or decrease the amount of scrolling by a single "page".
 	 *
 	 * @private
-	 * @param {MouseEvent} event - The click event triggered in the UI
+	 * @param {MouseEvent} event - The mouse event triggered in the UI
 	 * @memberof ScrollContainer
 	 */
 	scrollIfClickOnTrack = event => {
 		const { clientX, clientY } = event;
+		const { horizontalTrackRect, verticalTrackRect } = this.state;
 		const { clientHeight, clientWidth, scrollTop, scrollLeft } = this.contentContainer;
 
-		let clickedInVerticalTrack = false;
-		let verticalTrackRect = null;
-
-		if ( this.verticalTrack != null ) {
-			verticalTrackRect = this.verticalTrack.getBoundingClientRect();
-			clickedInVerticalTrack = eventInsideRect( event, verticalTrackRect );
-		}
-		if ( clickedInVerticalTrack ) {
+		if ( verticalTrackRect != null && eventInsideRect( event, verticalTrackRect ) ) {
 			event.preventDefault();
 			event.stopPropagation();
 			const { verticalThumbOffset, verticalThumbSize } = this.state;
@@ -280,20 +252,30 @@ export default class ScrollContainer extends PureComponent {
 			if ( clickedAboveThumb || clickedBelowThumb ) {
 				const scrollYTarget = clickedAboveThumb ? scrollTop - clientHeight : scrollTop + clientHeight;
 				this.scrollTo( scrollLeft, scrollYTarget );
+			} else {
+				this.setState( {
+					draggingThumb: true,
+					dragStartPosition: event.clientY,
+					forceVisible: true,
+					startingScrollPosition: scrollTop,
+				} );
 			}
-		} else if ( this.horizontalTrack != null ) {
-			const horizontalTrackRect = this.verticalTrack.getBoundingClientRect();
-			const clickedInHorizontalTrack = eventInsideRect( event, horizontalTrackRect );
-			if ( clickedInHorizontalTrack ) {
-				event.preventDefault();
-				event.stopPropagation();
-				const { horizontalThumbOffset, horizontalThumbSize } = this.state;
-				const clickedLeftThumb = clientX > horizontalTrackRect.left + horizontalThumbOffset + horizontalThumbSize;
-				const clickedRightThumb = clientX < horizontalTrackRect.left + horizontalThumbOffset;
-				if ( clickedRightThumb || clickedLeftThumb ) {
-					const scrollXTarget = clickedRightThumb ? scrollLeft - clientWidth : scrollLeft + clientWidth;
-					this.scrollTo( scrollTop, scrollXTarget );
-				}
+		} else if ( horizontalTrackRect != null && eventInsideRect( event, horizontalTrackRect ) ) {
+			event.preventDefault();
+			event.stopPropagation();
+			const { horizontalThumbOffset, horizontalThumbSize } = this.state;
+			const clickedLeftThumb = clientX > horizontalTrackRect.left + horizontalThumbOffset + horizontalThumbSize;
+			const clickedRightThumb = clientX < horizontalTrackRect.left + horizontalThumbOffset;
+			if ( clickedRightThumb || clickedLeftThumb ) {
+				const scrollXTarget = clickedRightThumb ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+				this.scrollTo( scrollXTarget, scrollTop );
+			} else {
+				this.setState( {
+					draggingThumb: true,
+					dragStartPosition: event.clientX,
+					forceVisible: true,
+					startingScrollPosition: scrollLeft,
+				} );
 			}
 		}
 	}
@@ -326,7 +308,7 @@ export default class ScrollContainer extends PureComponent {
 			} )
 			.easing( TWEEN.Easing.Linear.None )
 			.interpolation( TWEEN.Interpolation.Bezier )
-			.onComplete( () => this.setState( { scrolling: true } ) )
+			.onComplete( () => this.setState( { scrolling: false } ) )
 			.start();
 			const tweenUpdateFn = time => {
 				if ( this.state.scrolling ) {
@@ -336,6 +318,14 @@ export default class ScrollContainer extends PureComponent {
 			};
 			requestAnimationFrame( tweenUpdateFn );
 		} );
+	}
+
+	stopClickOnTrackOver = event => {
+		const { verticalTrackHovered, horizontalTrackHovered } = this.state;
+		if ( verticalTrackHovered || horizontalTrackHovered ) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
 	}
 
 	stopScrolling = () => {
@@ -370,18 +360,20 @@ export default class ScrollContainer extends PureComponent {
 		this.setState( {
 			verticalThumbOffset,
 			horizontalThumbOffset,
-			forceVisible: true,
 		} );
 	}
 
 	render() {
 		const { className, autoHide, children, direction } = this.props;
 		const {
+			draggingThumb,
 			forceVisible,
+			horizontalThumbHovered,
 			horizontalThumbOffset,
 			horizontalThumbSize,
 			horizontalTrackHovered,
 			scrolling,
+			verticalThumbHovered,
 			verticalThumbOffset,
 			verticalThumbSize,
 			verticalTrackHovered,
@@ -391,6 +383,7 @@ export default class ScrollContainer extends PureComponent {
 		const browserScrollbarPadding = `-${ browserScrollbarWidth }px`;
 		const classes = classnames( BASE_CLASS, `${ BASE_CLASS }__${ direction }`, className, {
 			[ `${ BASE_CLASS }-autohide` ]: autoHide,
+			[ `${ BASE_CLASS }-dragging` ]: draggingThumb,
 			[ `${ BASE_CLASS }__force-visible` ]: forceVisible,
 		} );
 		const scrollbarClipStyles = {
@@ -398,17 +391,17 @@ export default class ScrollContainer extends PureComponent {
 			marginBottom: showHorizontalScrollbar ? browserScrollbarPadding : '',
 		};
 		return (
-			<div ref={ n => this.rootNode = n } className={ classes }>
+			<div ref={ n => this.rootNode = n } className={ classes } onMouseLeave={ draggingThumb ? null : this.clearTrackRectangles }>
 				<div
 					ref={ n => this.contentContainer = n }
 					className={ `${ BASE_CLASS }__content-container` }
 					onScroll={ this.contentScrollHandler }
 					onClick={ this.contentUpdateHandler }
-					onClickCapture={ this.scrollIfClickOnTrack }
+					onClickCapture={ this.stopClickOnTrackOver }
 					onKeyDown={ this.contentUpdateHandler }
+					onMouseDownCapture={ this.scrollIfClickOnTrack }
 					onMouseEnter={ this.calculateTrackRectangles }
-					onMouseMove={ scrolling ? null : this.trackMouse }
-					onMouseLeave={ this.clearTrackRectangles }
+					onMouseMove={ scrolling || draggingThumb ? null : this.trackMouseForHover }
 					style={ scrollbarClipStyles }
 				>
 					{ children }
@@ -416,22 +409,24 @@ export default class ScrollContainer extends PureComponent {
 				{
 					showVerticalScrollbar
 					? <ScrollTrack
-						className={ verticalTrackHovered ? `${ BASE_CLASS }-is-hovered` : null }
 						direction="vertical"
 						refFn={ this.verticalTrackRef }
-						thumbSize={ verticalThumbSize }
+						thumbHovered={ verticalThumbHovered }
 						thumbOffset={ verticalThumbOffset }
+						thumbSize={ verticalThumbSize }
+						trackHovered={ verticalTrackHovered }
 					/>
 					: null
 				}
 				{
 					showHorizontalScrollbar
 					? <ScrollTrack
-						className={ horizontalTrackHovered ? `${ BASE_CLASS }-is-hovered` : null }
 						direction="horizontal"
 						refFn={ this.horizontalTrackRef }
-						thumbSize={ horizontalThumbSize }
+						thumbHovered={ horizontalThumbHovered }
 						thumbOffset={ horizontalThumbOffset }
+						thumbSize={ horizontalThumbSize }
+						trackHovered={ horizontalTrackHovered }
 					/>
 					: null
 				}
