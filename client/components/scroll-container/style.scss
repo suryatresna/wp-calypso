@@ -135,3 +135,8 @@ $scroll-width-transition: width 0.15s linear;
 		}
 	}
 }
+
+.#{$scroll-ns}__lock-scroll {
+	height: 100vh;
+	overflow: hidden;
+}

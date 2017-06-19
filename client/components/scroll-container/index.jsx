@@ -58,10 +58,15 @@ export default class ScrollContainer extends PureComponent {
 			verticalTrackWidth: 0,
 			verticalTrackHovered: false,
 		};
+		this.contentContainerRef = n => this.contentContainer = n;
 		this.horizontalTrackRef = c => this.horizontalTrack = c;
+		this.rootNodeRef = n => this.rootNode = n;
 		this.verticalTrackRef = c => this.verticalTrack = c;
 
-		this.contentScrollHandler = throttleToFrame( this.contentScrollHandler );
+		this.contentScrollHandler = throttleToFrame( () => {
+			this.updateScrollPosition();
+			this.autoHideAfterScroll();
+		} );
 		this.contentUpdateHandler = throttle( this.updateThumb, 100, { leading: false } );
 		this.coordinatesOverTrack = debounce( this.coordinatesOverTrack, 50, { leading: true, trailing: true } );
 		this.scrollByDragging = throttleToFrame( this.scrollByDragging );
@@ -165,11 +170,6 @@ export default class ScrollContainer extends PureComponent {
 		} );
 	}
 
-	contentScrollHandler = () => {
-		this.updateScrollPosition();
-		this.autoHideAfterScroll();
-	}
-
 	/**
 	 * Determine if a given set of X/Y client coordinates is on top of a visible scrollbar track.
 	 *
@@ -205,6 +205,13 @@ export default class ScrollContainer extends PureComponent {
 		}
 	}
 
+	/**
+	 * Scroll the content based on the current clientX and clientY of the mouse.
+	 *
+	 * @param {Number} clientX - X coordinate of the mouse with (0, 0) at the top left of the window
+	 * @param {Number} clientY - Y coordinate of the mouse with (0, 0) at the top left of the window
+	 * @memberof ScrollContainer
+	 */
 	scrollByDragging = ( clientX, clientY ) => {
 		let scrollProperty = 'scrollTop';
 		let currentPosition = clientY;
@@ -219,9 +226,20 @@ export default class ScrollContainer extends PureComponent {
 		this.contentContainer[ scrollProperty ] = this.state.startingScrollPosition + scrollDiff;
 	}
 
+	/**
+	 * After scrolling has completed, prevent a click event from landing on the content,
+	 * reset dragging state, and execute mouseleave handlers if the mouse is no longer
+	 * inside of this container.
+	 *
+	 * @param {MouseEvent} event - The mouseup event which caused scrolling to stop.
+	 * @memberof ScrollContainer
+	 */
 	stopDragging = event => {
 		event.preventDefault();
 		event.stopPropagation();
+		if ( ! this.rootNode.contains( event.target ) ) {
+			this.clearTrackRectangles();
+		}
 		this.setState( {
 			draggingThumb: false,
 			dragStartPosition: null,
@@ -320,6 +338,13 @@ export default class ScrollContainer extends PureComponent {
 		} );
 	}
 
+	/**
+	 * If the mouse is on top of the track, we have to manually stop the event from
+	 * landing on the underlying content since the track doesn't accept pointer events.
+	 *
+	 * @param {MouseEvent} event - The click event we might need to kill.
+	 * @memberof ScrollContainer
+	 */
 	stopClickOnTrackOver = event => {
 		const { verticalTrackHovered, horizontalTrackHovered } = this.state;
 		if ( verticalTrackHovered || horizontalTrackHovered ) {
@@ -391,16 +416,20 @@ export default class ScrollContainer extends PureComponent {
 			marginBottom: showHorizontalScrollbar ? browserScrollbarPadding : '',
 		};
 		return (
-			<div ref={ n => this.rootNode = n } className={ classes } onMouseLeave={ draggingThumb ? null : this.clearTrackRectangles }>
+			<div
+				ref={ this.rootNodeRef }
+				className={ classes }
+				onMouseEnter={ this.calculateTrackRectangles }
+				onMouseLeave={ draggingThumb ? null : this.clearTrackRectangles }
+			>
 				<div
-					ref={ n => this.contentContainer = n }
+					ref={ this.contentContainerRef }
 					className={ `${ BASE_CLASS }__content-container` }
 					onScroll={ this.contentScrollHandler }
 					onClick={ this.contentUpdateHandler }
 					onClickCapture={ this.stopClickOnTrackOver }
 					onKeyDown={ this.contentUpdateHandler }
 					onMouseDownCapture={ this.scrollIfClickOnTrack }
-					onMouseEnter={ this.calculateTrackRectangles }
 					onMouseMove={ scrolling || draggingThumb ? null : this.trackMouseForHover }
 					style={ scrollbarClipStyles }
 				>
