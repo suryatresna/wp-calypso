@@ -3,7 +3,7 @@ $scroll-border-radius: 3px;
 $scroll-thumb-min-size: 36px;
 $scroll-track-size: 10px;
 $scroll-opacity-transition: opacity 0.5s ease;
-$scroll-width-transition: width 0.15s linear;
+$scroll-width-transition: width 0.15s linear 0.25s;
 
 .#{$scroll-ns} {
 	overflow: hidden;

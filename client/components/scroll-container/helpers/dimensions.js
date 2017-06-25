@@ -3,11 +3,6 @@
  */
 import scrollbarWidth from 'scrollbar-width';
 
-/**
- * Internal Dependencies
- */
-import { LOCK_SCROLL_CLASS } from '../constants';
-
 export const browserScrollbarWidth = typeof document === 'undefined' ? 0 : scrollbarWidth();
 
 /**
@@ -58,58 +53,4 @@ export function calcThumbOffset( visibleSize, totalSize, scrollAmount, scrollDir
 	const maxOffset = trackSize - thumbSize;
 	const proportionScrolled = scrollAmount / totalSize;
 	return Math.min( Math.round( trackSize * proportionScrolled ), maxOffset );
-}
-
-/**
- * Prevent the body from scrolling.  Currently unused due to display issues...
- *
- * @export
- */
-export function lockBodyScroll() {
-	if (
-		typeof document !== undefined &&
-		document.body != null &&
-		! document.body.classList.contains( LOCK_SCROLL_CLASS )
-	) {
-		const body = document.body;
-		const bodyStyles = window.getComputedStyle( body );
-		const rightPadding = `${ browserScrollbarWidth }px`;
-		const widthWithoutPadding = `calc(100vw - ${ browserScrollbarWidth }px)`;
-		body.classList.add( LOCK_SCROLL_CLASS );
-		if ( bodyStyles.boxSizing !== 'border-box' ) {
-			body.style.width = widthWithoutPadding;
-		}
-		body.style.paddingRight = rightPadding;
-		const masterbar = body.getElementsByClassName( 'masterbar' );
-		if ( masterbar.length > 0 ) {
-			masterbar[ 0 ].style.paddingRight = rightPadding;
-			const masterbarStyles = window.getComputedStyle( masterbar[ 0 ] );
-			if ( masterbarStyles.boxSizing !== 'border-box' ) {
-				masterbar[ 0 ].style.width = widthWithoutPadding;
-			}
-		}
-	}
-}
-
-/**
- * Allow the body to scroll again.  Currently unused due to display issues...
- *
- * @export
- */
-export function unlockBodyScroll() {
-	if (
-		typeof document !== undefined &&
-		document.body != null &&
-		document.body.classList.contains( LOCK_SCROLL_CLASS )
-	) {
-		const body = document.body;
-		body.classList.remove( LOCK_SCROLL_CLASS );
-		body.style.paddingRight = '';
-		body.style.width = '';
-		const masterbar = body.getElementsByClassName( 'masterbar' );
-		if ( masterbar.length > 0 ) {
-			masterbar[ 0 ].style.paddingRight = '';
-			masterbar[ 0 ].style.width = '';
-		}
-	}
 }

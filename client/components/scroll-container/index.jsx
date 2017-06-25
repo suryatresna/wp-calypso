@@ -45,6 +45,8 @@ export default class ScrollContainer extends PureComponent {
 	constructor( props ) {
 		super( props );
 		this.state = {
+			canScrollHorizontal: false,
+			canScrollVertical: false,
 			draggingThumb: false,
 			forceVisible: ! this.props.autoHide,
 			horizontalThumbHovered: false,
@@ -67,11 +69,19 @@ export default class ScrollContainer extends PureComponent {
 			this.updateScrollPosition();
 			this.autoHideAfterScroll();
 		} );
-		this.contentUpdateHandler = throttle( this.updateThumb, 100, { leading: false } );
+		this.contentUpdateHandler = throttle( () => {
+			this.canScroll();
+			this.calculateTrackRectangles();
+			this.updateThumb();
+		}, 100, { leading: false } );
 		this.coordinatesOverTrack = debounce( this.coordinatesOverTrack, 50, { leading: true, trailing: true } );
 		this.scrollByDragging = throttleToFrame( this.scrollByDragging );
 		this.scrollComplete = debounce( this.autoHideAfterScroll, 333 );
-		this.windowResizeHandler = throttleToFrame( this.updateThumb );
+		this.windowResizeHandler = throttleToFrame( () => {
+			this.canScroll();
+			this.calculateTrackRectangles();
+			this.updateThumb();
+		} );
 
 		this.dragThumb = event => {
 			const { clientX, clientY } = event;
@@ -87,13 +97,17 @@ export default class ScrollContainer extends PureComponent {
 		if ( typeof window !== 'undefined' ) {
 			window.addEventListener( 'resize', this.windowResizeHandler );
 		}
-		const { clientHeight, clientWidth, scrollHeight, scrollWidth } = this.contentContainer;
-		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
-		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
-		this.setState( {
-			horizontalThumbSize,
-			verticalThumbSize,
-		} );
+		const canScroll = this.canScroll();
+		if ( canScroll.canScrollHorizontal ) {
+			const { clientWidth, scrollWidth } = this.contentContainer;
+			const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, this.props.direction );
+			this.setState( { horizontalThumbSize } );
+		}
+		if ( canScroll.canScrollVertical ) {
+			const { clientHeight, scrollHeight } = this.contentContainer;
+			const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, this.props.direction );
+			this.setState( { verticalThumbSize } );
+		}
 	}
 
 	componentDidUpdate( prevProps, prevState ) {
@@ -147,25 +161,42 @@ export default class ScrollContainer extends PureComponent {
 	}
 
 	calculateTrackRectangles = () => {
-		const newState = {};
-		if ( this.horizontalTrack != null ) {
-			newState.horizontalTrackRect = this.horizontalTrack.getBoundingClientRect();
-		}
-		if ( this.verticalTrack != null ) {
-			newState.verticalTrackRect = this.verticalTrack.getBoundingClientRect();
-		}
+		this.setState( prevState => {
+			const newState = {};
+			if ( prevState.canScrollHorizontal || prevState.canScrollVertical ) {
+				if ( prevState.canScrollHorizontal && this.horizontalTrack != null ) {
+					const horizontalTrackRect = this.horizontalTrack.getBoundingClientRect();
+					if ( horizontalTrackRect.height > 0 ) {
+						newState.horizontalTrackRect = horizontalTrackRect;
+					}
+				}
+				if ( prevState.canScrollVertical && this.verticalTrack != null ) {
+					const verticalTrackRect = this.verticalTrack.getBoundingClientRect();
+					if ( verticalTrackRect.width > 0 ) {
+						newState.verticalTrackRect = verticalTrackRect;
+					}
+				}
+				return newState;
+			}
+			return null;
+		} );
+	}
 
-		if (
-			( newState.horizontalTrackRect !== undefined && newState.horizontalTrackRect.height > 0 ) ||
-			( newState.verticalTrackRect !== undefined && newState.verticalTrackRect.width > 0 )
-		) {
-			this.setState( newState );
-		}
+	canScroll = () => {
+		const content = this.contentContainer;
+		const scrollState = {
+			canScrollHorizontal: this.props.direction !== 'vertical' && content.clientWidht < content.scrollWidth,
+			canScrollVertical: this.props.direction !== 'horizontal' && content.clientHeight < content.scrollHeight,
+		};
+		this.setState( scrollState );
+		return scrollState;
 	}
 
 	clearTrackRectangles = () => {
 		this.setState( {
+			horizontalTrackHovered: false,
 			horizontalTrackRect: null,
+			verticalTrackHovered: false,
 			verticalTrackRect: null,
 		} );
 	}
@@ -179,30 +210,31 @@ export default class ScrollContainer extends PureComponent {
 	 * @memberof ScrollContainer
 	 */
 	coordinatesOverTrack = ( x, y ) => {
-		const { horizontalTrackRect, verticalTrackRect } = this.state;
-		if ( horizontalTrackRect == null && verticalTrackRect == null ) {
-			this.calculateTrackRectangles();
-		} else {
+		this.setState( prevState => {
+			const { horizontalTrackRect, verticalTrackRect } = prevState;
+			if ( horizontalTrackRect == null && verticalTrackRect == null ) {
+				return this.calculateTrackRectangles;
+			}
 			const fakeEvent = { clientX: x, clientY: y };
-			const verticalTrackHovered = verticalTrackRect == null ? false : eventInsideRect( fakeEvent, verticalTrackRect );
-			const horizontalTrackHovered = horizontalTrackRect == null ? false : eventInsideRect( fakeEvent, horizontalTrackRect );
-			let verticalThumbHovered = false;
-			let horizontalThumbHovered = false;
-			if ( verticalTrackHovered ) {
-				const thumbTop = verticalTrackRect.top + this.state.verticalThumbOffset;
-				verticalThumbHovered = x >= thumbTop && x <= thumbTop + this.state.verticalThumbSize;
+			const newState = {};
+			if ( prevState.canScrollHorizontal ) {
+				newState.horizontalTrackHovered = horizontalTrackRect == null ? false : eventInsideRect( fakeEvent, horizontalTrackRect );
+				newState.horizontalThumbHovered = false;
+				if ( newState.horizontalTrackHovered ) {
+					const thumbLeft = horizontalTrackRect.left + prevState.horizontalThumbOffset;
+					newState.horizontalThumbHovered = y >= thumbLeft && y <= thumbLeft + prevState.horizontalThumbSize;
+				}
 			}
-			if ( horizontalTrackHovered ) {
-				const thumbLeft = horizontalTrackRect.left + this.state.horizontalThumbOffset;
-				horizontalThumbHovered = y >= thumbLeft && y <= thumbLeft + this.state.horizontalThumbSize;
+			if ( prevState.canScrollVertical ) {
+				newState.verticalTrackHovered = verticalTrackRect == null ? false : eventInsideRect( fakeEvent, verticalTrackRect );
+				newState.verticalThumbHovered = false;
+				if ( newState.verticalTrackHovered ) {
+					const thumbTop = verticalTrackRect.top + prevState.verticalThumbOffset;
+					newState.verticalThumbHovered = x >= thumbTop && x <= thumbTop + prevState.verticalThumbSize;
+				}
 			}
-			this.setState( {
-				horizontalThumbHovered,
-				horizontalTrackHovered,
-				verticalThumbHovered,
-				verticalTrackHovered,
-			} );
-		}
+			return newState;
+		} );
 	}
 
 	/**
@@ -213,14 +245,9 @@ export default class ScrollContainer extends PureComponent {
 	 * @memberof ScrollContainer
 	 */
 	scrollByDragging = ( clientX, clientY ) => {
-		let scrollProperty = 'scrollTop';
-		let currentPosition = clientY;
-		if ( this.state.horizontalTrackHovered ) {
-			scrollProperty = 'scrollLeft';
-			currentPosition = clientX;
-		}
-
 		const { clientHeight, scrollHeight } = this.contentContainer;
+		const scrollProperty = this.state.horizontalTrackHovered ? 'scrollLeft' : 'scrollTop';
+		const currentPosition = this.state.horizontalTrackHovered ? clientX : clientY;
 		const trackDiff = currentPosition - this.state.dragStartPosition;
 		const scrollDiff = scrollHeight / clientHeight * trackDiff;
 		this.contentContainer[ scrollProperty ] = this.state.startingScrollPosition + scrollDiff;
@@ -361,35 +388,44 @@ export default class ScrollContainer extends PureComponent {
 	}
 
 	updateThumb = () => {
-		this.updateScrollBarSize();
+		this.updateThumbSize();
 		this.updateScrollPosition();
 	}
 
-	updateScrollBarSize = () => {
-		const { scrollHeight, scrollWidth, clientHeight, clientWidth } = this.contentContainer;
-		const { direction } = this.props;
-		const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, direction );
-		const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, direction );
-		this.setState( {
-			horizontalThumbSize,
-			percentVisible: 100,
-			verticalThumbSize,
+	updateThumbSize = () => {
+		this.setState( ( prevState, props ) => {
+			const { scrollHeight, scrollWidth, clientHeight, clientWidth } = this.contentContainer;
+			const { direction } = props;
+			const verticalThumbSize = calcThumbSize( clientHeight, scrollHeight, direction );
+			const horizontalThumbSize = calcThumbSize( clientWidth, scrollWidth, direction );
+			return {
+				horizontalThumbSize,
+				verticalThumbSize,
+			};
 		} );
 	}
 
 	updateScrollPosition = () => {
 		const { scrollHeight, scrollWidth, clientHeight, clientWidth, scrollTop, scrollLeft } = this.contentContainer;
 		const { direction } = this.props;
-		const verticalThumbOffset = calcThumbOffset( clientHeight, scrollHeight, scrollTop, direction );
-		const horizontalThumbOffset = calcThumbOffset( clientWidth, scrollWidth, scrollLeft, direction );
-		this.setState( {
-			verticalThumbOffset,
-			horizontalThumbOffset,
+		this.setState( prevState => {
+			if ( prevState.canScrollHorizontal || prevState.canScrollVertical ) {
+				const newState = {};
+				if ( prevState.canScrollHorizontal ) {
+					newState.horizontalThumbOffset = calcThumbOffset( clientWidth, scrollWidth, scrollLeft, direction );
+				}
+				if ( prevState.canScrollVertical ) {
+					newState.verticalThumbOffset = calcThumbOffset( clientHeight, scrollHeight, scrollTop, direction );
+				}
+				return newState;
+			}
+			return null;
 		} );
 	}
 
 	render() {
 		const { className, autoHide, children, direction } = this.props;
+		const { canScrollHorizontal, canScrollVertical } = this.state;
 		const {
 			draggingThumb,
 			forceVisible,
@@ -403,8 +439,6 @@ export default class ScrollContainer extends PureComponent {
 			verticalThumbSize,
 			verticalTrackHovered,
 		} = this.state;
-		const showVerticalScrollbar = direction !== 'horizontal';
-		const showHorizontalScrollbar = direction !== 'vertical';
 		const browserScrollbarPadding = `-${ browserScrollbarWidth }px`;
 		const classes = classnames( BASE_CLASS, `${ BASE_CLASS }__${ direction }`, className, {
 			[ `${ BASE_CLASS }-autohide` ]: autoHide,
@@ -412,8 +446,8 @@ export default class ScrollContainer extends PureComponent {
 			[ `${ BASE_CLASS }__force-visible` ]: forceVisible,
 		} );
 		const scrollbarClipStyles = {
-			marginRight: showVerticalScrollbar ? browserScrollbarPadding : '',
-			marginBottom: showHorizontalScrollbar ? browserScrollbarPadding : '',
+			marginRight: direction !== 'horizontal' ? browserScrollbarPadding : '',
+			marginBottom: direction !== 'vertical' ? browserScrollbarPadding : '',
 		};
 		return (
 			<div
@@ -436,7 +470,7 @@ export default class ScrollContainer extends PureComponent {
 					{ children }
 				</div>
 				{
-					showVerticalScrollbar
+					canScrollVertical
 					? <ScrollTrack
 						direction="vertical"
 						refFn={ this.verticalTrackRef }
@@ -448,7 +482,7 @@ export default class ScrollContainer extends PureComponent {
 					: null
 				}
 				{
-					showHorizontalScrollbar
+					canScrollHorizontal
 					? <ScrollTrack
 						direction="horizontal"
 						refFn={ this.horizontalTrackRef }

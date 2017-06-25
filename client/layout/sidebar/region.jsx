@@ -20,7 +20,7 @@ const SidebarRegion = ( { children, className } ) => {
 	);
 	if ( useCustomScrollbars ) {
 		return (
-			<ScrollContainer direction="vertical" autoHide>
+			<ScrollContainer direction="vertical" autoHide={ false }>
 				{ region }
 			</ScrollContainer>
 		);
