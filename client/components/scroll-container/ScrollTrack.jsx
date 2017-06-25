@@ -16,10 +16,10 @@ export default class ScrollTrack extends PureComponent {
 		const isHorizontal = direction === 'horizontal';
 		const hoverClass = `${ BASE_CLASS }-is-hovered`;
 		const thumbStyles = {
-			height: isVertical ? `${ thumbSize }px` : '',
-			left: isHorizontal ? `${ thumbOffset }px` : '',
-			top: isVertical ? `${ thumbOffset }px` : '',
-			width: isHorizontal ? `${ thumbSize }px` : '',
+			height: isVertical ? `${ thumbSize }px` : null,
+			left: isHorizontal ? `${ thumbOffset }px` : null,
+			top: isVertical ? `${ thumbOffset }px` : null,
+			width: isHorizontal ? `${ thumbSize }px` : null,
 		};
 		const trackClasses = classnames( `${ BASE_CLASS }__track ${ BASE_CLASS }__track-${ direction }`, className, {
 			[ hoverClass ]: trackHovered,
