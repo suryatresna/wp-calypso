@@ -295,16 +295,19 @@ export default class ScrollContainer extends PureComponent {
 			const { verticalThumbOffset, verticalThumbSize } = this.state;
 			const clickedBelowThumb = clientY > verticalTrackRect.top + verticalThumbOffset + verticalThumbSize;
 			const clickedAboveThumb = clientY < verticalTrackRect.top + verticalThumbOffset;
+			let scrollYTarget = scrollTop;
+			const startDragging = () => this.setState( () => ( {
+				draggingThumb: true,
+				dragStartPosition: clientY,
+				forceVisible: true,
+				startingScrollPosition: scrollYTarget,
+				verticalThumbHovered: true,
+			} ) );
 			if ( clickedAboveThumb || clickedBelowThumb ) {
-				const scrollYTarget = clickedAboveThumb ? scrollTop - clientHeight : scrollTop + clientHeight;
-				this.scrollTo( scrollLeft, scrollYTarget );
+				scrollYTarget = clickedAboveThumb ? scrollTop - clientHeight : scrollTop + clientHeight;
+				this.scrollTo( scrollLeft, scrollYTarget, startDragging );
 			} else {
-				this.setState( () => ( {
-					draggingThumb: true,
-					dragStartPosition: clientY,
-					forceVisible: true,
-					startingScrollPosition: scrollTop,
-				} ) );
+				startDragging();
 			}
 		} else if ( horizontalTrackRect != null && eventInsideRect( event, horizontalTrackRect ) ) {
 			event.preventDefault();
@@ -312,16 +315,19 @@ export default class ScrollContainer extends PureComponent {
 			const { horizontalThumbOffset, horizontalThumbSize } = this.state;
 			const clickedLeftThumb = clientX > horizontalTrackRect.left + horizontalThumbOffset + horizontalThumbSize;
 			const clickedRightThumb = clientX < horizontalTrackRect.left + horizontalThumbOffset;
+			let scrollXTarget = scrollLeft;
+			const startDragging = () => this.setState( () => ( {
+				draggingThumb: true,
+				dragStartPosition: clientX,
+				forceVisible: true,
+				horizontalThumbHovered: true,
+				startingScrollPosition: scrollXTarget,
+			} ) );
 			if ( clickedRightThumb || clickedLeftThumb ) {
-				const scrollXTarget = clickedRightThumb ? scrollLeft - clientWidth : scrollLeft + clientWidth;
-				this.scrollTo( scrollXTarget, scrollTop );
+				scrollXTarget = clickedRightThumb ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+				this.scrollTo( scrollXTarget, scrollTop, startDragging );
 			} else {
-				this.setState( () => ( {
-					draggingThumb: true,
-					dragStartPosition: clientX,
-					forceVisible: true,
-					startingScrollPosition: scrollLeft,
-				} ) );
+				startDragging();
 			}
 		}
 	}
@@ -332,9 +338,10 @@ export default class ScrollContainer extends PureComponent {
 	 * @private
 	 * @param {Number} x - The amount of desired horizontal scrolling
 	 * @param {Number} y - The amount of desired vertical scrolling
+	 * @param {Function} [cb] - Callback to execute after scrolling
 	 * @memberof ScrollContainer
 	 */
-	scrollTo = ( x, y ) => {
+	scrollTo = ( x, y, cb ) => {
 		if ( this.scrollTween != null ) {
 			this.scrollTween.stop();
 		}
@@ -354,7 +361,12 @@ export default class ScrollContainer extends PureComponent {
 			} )
 			.easing( TWEEN.Easing.Linear.None )
 			.interpolation( TWEEN.Interpolation.Bezier )
-			.onComplete( this.stopScrolling )
+			.onComplete( () => {
+				this.stopScrolling();
+				if ( typeof cb === 'function' ) {
+					cb();
+				}
+			} )
 			.start();
 			const tweenUpdateFn = time => {
 				if ( this.state.scrolling ) {
