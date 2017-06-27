@@ -71,8 +71,8 @@ const DomainRegistrationSuggestion = React.createClass( {
 		let buttonClasses, buttonContent;
 
 		if ( domain ) {
-			const newTLDs = [];
-			const testTLDs = [ '.ca', '.de', '.fr' ];
+			const newTLDs = [ '.ca' ];
+			const testTLDs = [ '.de', '.fr' ];
 			// Grab everything after the first dot, so 'example.co.uk' will
 			// match '.co.uk' but not '.uk'
 			// This won't work if we add subdomains.
