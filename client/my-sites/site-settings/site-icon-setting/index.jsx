@@ -21,7 +21,12 @@ import { isSavingSiteSettings } from 'state/site-settings/selectors';
 import { setEditorMediaModalView } from 'state/ui/editor/actions';
 import { resetAllImageEditorState } from 'state/ui/editor/image-editor/actions';
 import { receiveMedia, deleteMedia } from 'state/media/actions';
-import { isJetpackSite, getCustomizerUrl, getSiteAdminUrl } from 'state/sites/selectors';
+import {
+	isJetpackSite,
+	getCustomizerUrl,
+	getSiteAdminUrl,
+	getSite
+} from 'state/sites/selectors';
 import { ModalViews } from 'state/ui/media-modal/constants';
 import { AspectRatios } from 'state/ui/editor/image-editor/constants';
 import { getSelectedSiteId } from 'state/ui/selectors';
@@ -94,7 +99,7 @@ class SiteIconSetting extends Component {
 	}
 
 	uploadSiteIcon( blob, fileName ) {
-		const { siteId, translate, siteIconId } = this.props;
+		const { siteId, translate, siteIconId, site } = this.props;
 
 		// Upload media using a manually generated ID so that we can continue
 		// to reference it within this function
@@ -147,7 +152,7 @@ class SiteIconSetting extends Component {
 
 		MediaStore.on( 'change', checkUploadComplete );
 
-		MediaActions.add( siteId, {
+		MediaActions.add( site, {
 			ID: transientMediaId,
 			fileContents: blob,
 			fileName
@@ -329,7 +334,8 @@ export default connect(
 			customizerUrl: getCustomizerUrl( state, siteId, 'identity' ),
 			generalOptionsUrl: getSiteAdminUrl( state, siteId, 'options-general.php' ),
 			crop: getImageEditorCrop( state ),
-			transform: getImageEditorTransform( state )
+			transform: getImageEditorTransform( state ),
+			site: getSite( state, siteId )
 		};
 	},
 	{

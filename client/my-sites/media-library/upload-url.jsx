@@ -43,7 +43,7 @@ class MediaLibraryUploadUrl extends Component {
 		}
 
 		MediaActions.clearValidationErrors( this.props.site.ID );
-		MediaActions.add( this.props.site.ID, this.state.value );
+		MediaActions.add( this.props.site, this.state.value );
 
 		this.setState( { value: '', isError: false } );
 		this.props.onAddMedia();

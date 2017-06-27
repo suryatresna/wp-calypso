@@ -11,7 +11,6 @@ import pickBy from 'lodash/pickBy';
  */
 import Dispatcher from 'dispatcher';
 import emitter from 'lib/mixins/emitter';
-import Sites from 'lib/sites-list';
 import MediaUtils from './utils';
 import { ValidationErrors as MediaValidationErrors } from './constants';
 
@@ -21,7 +20,6 @@ import { ValidationErrors as MediaValidationErrors } from './constants';
 const MediaValidationStore = {
 	_errors: {}
 };
-const sites = Sites();
 
 /**
  * Errors are represented as an object, mapping a site to an object of items
@@ -51,9 +49,8 @@ function ensureErrorsObjectForSite( siteId ) {
 	MediaValidationStore._errors[ siteId ] = {};
 }
 
-MediaValidationStore.validateItem = function( siteId, item ) {
-	var site = sites.getSite( siteId ),
-		itemErrors = [];
+MediaValidationStore.validateItem = function( site, item ) {
+	const itemErrors = [];
 
 	if ( ! site ) {
 		return;
@@ -72,8 +69,8 @@ MediaValidationStore.validateItem = function( siteId, item ) {
 	}
 
 	if ( itemErrors.length ) {
-		ensureErrorsObjectForSite( siteId );
-		MediaValidationStore._errors[ siteId ][ item.ID ] = itemErrors;
+		ensureErrorsObjectForSite( site.ID );
+		MediaValidationStore._errors[ site.ID ][ item.ID ] = itemErrors;
 	}
 };
 
@@ -162,7 +159,7 @@ MediaValidationStore.dispatchToken = Dispatcher.register( function( payload ) {
 			errors = items.reduce( function( memo, item ) {
 				var itemErrors;
 
-				MediaValidationStore.validateItem( action.siteId, item );
+				MediaValidationStore.validateItem( action.site, item );
 
 				itemErrors = MediaValidationStore.getErrors( action.siteId, item.ID );
 				if ( itemErrors.length ) {
