@@ -175,6 +175,7 @@ class PlanFeatures extends Component {
 						isLandingPage={ isLandingPage }
 						isPopular = { popular }
 						planName ={ planConstantObj.getTitle() }
+						planType={ planName }
 					/>
 					<FoldableCard
 						header={ translate( 'Show features' ) }
@@ -303,6 +304,7 @@ class PlanFeatures extends Component {
 						isInSignup={ isInSignup }
 						isLandingPage={ isLandingPage }
 						manageHref={ `/plans/my-plan/${ site.slug }` }
+						planType={ planName }
 					/>
 				</td>
 			);
@@ -415,6 +417,7 @@ class PlanFeatures extends Component {
 						isLandingPage={ isLandingPage }
 						isPopular = { popular }
 						manageHref={ `/plans/my-plan/${ site.slug }` }
+						planType={ planName }
 					/>
 				</td>
 			);
