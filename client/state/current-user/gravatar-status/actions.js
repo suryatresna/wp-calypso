@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import request from 'superagent';
+import wpcom from 'lib/wp';
 
 /**
  * Internal dependencies
@@ -20,20 +20,13 @@ import {
 	withAnalytics,
 } from 'state/analytics/actions';
 
-export function uploadGravatar( file, bearerToken, email ) {
+export function uploadGravatar( file, email ) {
 	return dispatch => {
 		dispatch( withAnalytics(
 			recordTracksEvent( 'calypso_edit_gravatar_upload_start' ),
 			{ type: GRAVATAR_UPLOAD_REQUEST }
 		) );
-
-		const data = new FormData();
-		data.append( 'filedata', file );
-		data.append( 'account', email );
-		return request
-			.post( 'https://api.gravatar.com/v1/upload-image' )
-			.send( data )
-			.set( 'Authorization', 'Bearer ' + bearerToken )
+		return wpcom.undocumented().uploadGravatar( email, file )
 			.then( () => {
 				const fileReader = new FileReader( file );
 				fileReader.addEventListener( 'load', function() {
