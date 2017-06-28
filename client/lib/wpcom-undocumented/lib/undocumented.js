@@ -713,6 +713,26 @@ Undocumented.prototype.metaKeyring = function( fn ) {
 };
 
 /**
+ * Upload a Gravatar image
+ *
+ * @param {string} email The email address of the Gravatar account
+ * @param {Blob} file The file data blob of the image
+ * @param {Function} fn The callback function
+ * @return {Promise} A Promise to resolve when complete
+ * @api public
+ */
+Undocumented.prototype.uploadGravatar = function( email, file, fn ) {
+	return this.wpcom.req.post( {
+		path: '/gravatar-upload',
+		apiNamespace: 'wpcom/v2',
+		formData: [
+			[ 'account', email ],
+			[ 'filedata', file ],
+		],
+	}, fn );
+};
+
+/**
  * Return a list of happiness engineers gravatar urls
  *
  * @param {Function} fn The callback function
