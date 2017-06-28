@@ -29,6 +29,8 @@ const WIDE_DISPLAY_CUTOFF = 660;
 const updateQueryArg = params =>
 	page.replace( addQueryArgs( params, window.location.pathname + window.location.search ) );
 
+const SpacerDiv = ( { width, height } ) => <div style={ { width, height } } />;
+
 class SearchStream extends React.Component {
 	static propTypes = {
 		query: PropTypes.string,
@@ -93,6 +95,8 @@ class SearchStream extends React.Component {
 		updateQueryArg( { sort } );
 	};
 
+	handleFixedAreaMounted = ref => this.fixedAreaRef = ref;
+
 	handleSearchTypeSelection = searchType => updateQueryArg( { show: searchType } );
 
 	render() {
@@ -122,10 +126,16 @@ class SearchStream extends React.Component {
 			'is-two-columns': !! query,
 		} );
 
+		const FixedAreaPadding = withDimensions( SpacerDiv, { domTarget: this.fixedAreaRef } );
+
 		return (
 			<div>
 				<DocumentHead title={ documentTitle } />
-				<div className="search-stream__fixed-area" style={ { width: this.props.width } }>
+				<div
+					className="search-stream__fixed-area"
+					style={ { width: this.props.width } }
+					ref={ this.handleFixedAreaMounted }
+				>
 					<CompactCard className="search-stream__input-card">
 						<SearchInput
 							onSearch={ this.updateQuery }
@@ -154,6 +164,7 @@ class SearchStream extends React.Component {
 							wideDisplay={ wideDisplay }
 						/> }
 				</div>
+				<FixedAreaPadding />
 				{ wideDisplay &&
 					<div className={ searchStreamResultsClasses }>
 						<div className="search-stream__post-results">
