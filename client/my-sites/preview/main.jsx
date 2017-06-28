@@ -14,6 +14,8 @@ import {
 	getSelectedSiteId,
 } from 'state/ui/selectors';
 import addQueryArgs from 'lib/route/add-query-args';
+import { setLayoutFocus } from 'state/ui/layout-focus/actions';
+import { isMobile } from 'lib/viewport';
 
 import DocumentHead from 'components/data/document-head';
 import Main from 'components/main';
@@ -31,6 +33,7 @@ class PreviewMain extends React.Component {
 
 	componentWillMount() {
 		this.updateUrl();
+		this._isMobile = isMobile();
 	}
 
 	updateUrl() {
@@ -65,6 +68,10 @@ class PreviewMain extends React.Component {
 		}
 	}
 
+	focusSidebar = () => {
+		this.props.setLayoutFocus( 'sidebar' );
+	}
+
 	render() {
 		const { translate } = this.props;
 
@@ -72,7 +79,8 @@ class PreviewMain extends React.Component {
 			<Main className="preview">
 				<DocumentHead title={ translate( 'Site Preview' ) } />
 				<WebPreviewContent
-					showClose={ false }
+					showClose={ this._isMobile }
+					onClose={ this.focusSidebar }
 					previewUrl={ this.state.previewUrl }
 				/>
 			</Main>
@@ -85,4 +93,4 @@ const mapState = ( state ) => ( {
 	siteId: getSelectedSiteId( state ),
 } );
 
-export default connect( mapState )( localize( PreviewMain ) );
+export default connect( mapState, { setLayoutFocus } )( localize( PreviewMain ) );
