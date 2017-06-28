@@ -14,7 +14,7 @@ import {
 	GRAVATAR_UPLOAD_REQUEST,
 	GRAVATAR_UPLOAD_REQUEST_SUCCESS,
 	GRAVATAR_UPLOAD_REQUEST_FAILURE
- } from 'state/action-types';
+} from 'state/action-types';
 import {
 	receiveGravatarImageFailed,
 	uploadGravatar
@@ -42,7 +42,7 @@ describe( 'actions', () => {
 
 	describe( '#uploadGravatar', () => {
 		it( 'dispatches request action when thunk triggered', () => {
-			uploadGravatar( 'file', 'bearerToken', 'email' )( spy );
+			uploadGravatar( 'file', 'email' )( spy );
 			expect( spy ).to.have.been.calledWith( sinon.match( {
 				type: GRAVATAR_UPLOAD_REQUEST
 			} ) );
@@ -50,14 +50,14 @@ describe( 'actions', () => {
 
 		describe( 'successful request', () => {
 			useNock( ( nock ) => {
-				nock( 'https://api.gravatar.com' )
+				nock( 'https://public-api.wordpress.com' )
 					.persist()
-					.post( '/v1/upload-image' )
+					.post( '/wpcom/v2/gravatar-upload' )
 					.reply( 200, 'Successful request' );
 			} );
 
 			it( 'dispatches receive action', () => {
-				return uploadGravatar( 'file', 'bearerToken', 'email' )( spy )
+				return uploadGravatar( 'file', 'email' )( spy )
 					.then( () => {
 						expect( spy ).to.have.been.calledWith( {
 							type: GRAVATAR_UPLOAD_RECEIVE,
@@ -67,7 +67,7 @@ describe( 'actions', () => {
 			} );
 
 			it( 'dispatches success action', () => {
-				return uploadGravatar( 'file', 'bearerToken', 'email' )( spy )
+				return uploadGravatar( 'file', 'email' )( spy )
 					.then( () => {
 						expect( spy ).to.have.been.calledWith( sinon.match( {
 							type: GRAVATAR_UPLOAD_REQUEST_SUCCESS
@@ -78,13 +78,13 @@ describe( 'actions', () => {
 
 		describe( 'failed request', () => {
 			useNock( ( nock ) => {
-				nock( 'https://api.gravatar.com' )
-					.post( '/v1/upload-image' )
+				nock( 'https://public-api.wordpress.com' )
+					.post( '/wpcom/v2/gravatar-upload' )
 					.reply( 400, 'Failed request' );
 			} );
 
 			it( 'dispatches failure action', () => {
-				return uploadGravatar( 'file', 'bearerToken', 'email' )( spy )
+				return uploadGravatar( 'file', 'email' )( spy )
 					.then( () => {
 						expect( spy ).to.have.been.calledWith( sinon.match( {
 							type: GRAVATAR_UPLOAD_REQUEST_FAILURE
