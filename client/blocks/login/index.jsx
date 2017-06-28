@@ -97,7 +97,7 @@ class Login extends Component {
 			this.props.requestAccountError ||
 			this.props.createAccountError && this.props.createAccountError.code !== 'unknown_user' ? this.props.createAccountError : null;
 
-		if ( ! error || ( error.field && error.field !== 'global' ) || ! error.message ) {
+		if ( ! error || ( error.field && error.field !== 'global' ) || error.code === 'existing_wpcom_user' || ! error.message ) {
 			return null;
 		}
 
