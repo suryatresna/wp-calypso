@@ -1,9 +1,9 @@
 $scroll-ns: 'scroll-container';
-$scroll-border-radius: 3px;
-$scroll-thumb-min-size: 36px;
+$scroll-border-radius: 10px;
+$scroll-puck-min-size: 36px;
 $scroll-track-size: 10px;
-$scroll-opacity-transition: opacity 0.5s ease;
-$scroll-width-transition: width 0.15s linear 0.25s;
+$scroll-opacity-transition: opacity 0.4s ease;
+$scroll-width-transition: width 0.1s linear 0.2s;
 
 .#{$scroll-ns} {
 	overflow: hidden;
@@ -30,7 +30,6 @@ $scroll-width-transition: width 0.15s linear 0.25s;
     // Autohide functionality
     &-autohide .#{$scroll-ns}__track {
         opacity: 0;
-		// property duration function delay
 		transition: $scroll-opacity-transition, $scroll-width-transition;
     }
     &-autohide:hover, &__force-visible {
@@ -40,24 +39,24 @@ $scroll-width-transition: width 0.15s linear 0.25s;
 		}
 	}
 
-    // Thumb (draggable element)
-    &__thumb {
-		background: #aaa;
+    // Puck (draggable element)
+    &__puck {
+		background: transparentize( darken( $gray, 10% ), 0.7);
 		background-clip: padding-box;
 		border-radius: $scroll-border-radius;
 		box-sizing: border-box;
 		position: relative;
 
 		&.#{$scroll-ns}-is-hovered {
-			background: #666;
+			background: transparentize( darken( $gray, 10% ), 0.2 );
 		}
 
 		.#{$scroll-ns}-dragging & {
-			background: #444;
+			background: darken( $gray, 10% );
 		}
 
 		&-vertical {
-			min-height: $scroll-thumb-min-size;
+			min-height: $scroll-puck-min-size;
 			padding: $scroll-border-radius 0;
 			top: 0;
 			width: 100%;
@@ -66,17 +65,17 @@ $scroll-width-transition: width 0.15s linear 0.25s;
 
     // Track (clickable background)
     &__track {
-        background-color: rgba(217, 217, 217, 0.1);
 		background-clip: padding-box;
 		border-radius: $scroll-border-radius;
 		box-sizing: border-box;
+		margin: 2px;
 		pointer-events: none;
 		position: absolute;
 
 		// Since the track has "pointer-events: none", a class gets added for the
 		// "hover" state
 		&.#{$scroll-ns}-is-hovered {
-			background-color: rgba(217, 217, 217, 0.7);
+			background-color: transparentize( lighten( $gray, 20% ), 0.5 );
 		}
 
 		&-vertical {
