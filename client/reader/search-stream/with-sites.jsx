@@ -2,7 +2,7 @@
  * External Dependencies
  */
 import React, { PropTypes } from 'react';
-import { trim } from 'lodash';
+import { trim, initial, flatMap } from 'lodash';
 import { localize } from 'i18n-calypso';
 import page from 'page';
 import cx from 'classnames';
@@ -23,6 +23,8 @@ import ReaderMain from 'components/reader-main';
 import { addQueryArgs } from 'lib/url';
 import SearchStreamHeader, { POSTS } from './search-stream-header';
 import withDimensions from 'lib/with-dimensions';
+import SuggestionProvider from './suggestion-provider';
+import Suggestion from './suggestion';
 
 const WIDE_DISPLAY_CUTOFF = 660;
 
@@ -100,7 +102,7 @@ class SearchStream extends React.Component {
 	handleSearchTypeSelection = searchType => updateQueryArg( { show: searchType } );
 
 	render() {
-		const { query, translate, searchType } = this.props;
+		const { query, translate, searchType, suggestions } = this.props;
 		// const emptyContent = <EmptyContent query={ query } />;
 		const sortOrder = this.props.postsStore && this.props.postsStore.sortOrder;
 		const wideDisplay = this.props.width > WIDE_DISPLAY_CUTOFF;
@@ -127,6 +129,20 @@ class SearchStream extends React.Component {
 		} );
 
 		const FixedAreaPadding = withDimensions( SpacerDiv, { domTarget: this.fixedAreaRef } );
+		const suggestionList = initial(
+			flatMap(
+				suggestions,
+				suggestion => [
+					<Suggestion
+						suggestion={ suggestion.text }
+						source="search"
+						sort={ sortOrder === 'date' ? sortOrder : undefined }
+						railcar={ suggestion.railcar }
+					/>,
+					', ',
+				],
+			),
+		);
 
 		return (
 			<div>
@@ -163,6 +179,15 @@ class SearchStream extends React.Component {
 							onSelection={ this.handleSearchTypeSelection }
 							wideDisplay={ wideDisplay }
 						/> }
+					{ ! query &&
+						<div className="search-stream__blank-suggestions">
+							{ suggestions &&
+								this.props.translate( 'Suggestions: {{suggestions /}}.', {
+									components: {
+										suggestions: suggestionList,
+									},
+								} ) }
+						</div> }
 				</div>
 				<FixedAreaPadding />
 				{ wideDisplay &&
@@ -194,4 +219,4 @@ const wrapWithMain = Component => props => (
 );
 /* eslint-enable */
 
-export default localize( wrapWithMain( withDimensions( SearchStream ) ) );
+export default localize( SuggestionProvider( wrapWithMain( withDimensions( SearchStream ) ) ) );
