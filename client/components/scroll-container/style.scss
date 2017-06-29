@@ -21,16 +21,6 @@ $scroll-width-transition: width 0.15s linear 0.25s;
 		overflow-x: hidden;
 		overflow-y: scroll;
 	}
-	&__horizontal .#{$scroll-ns}__content-container {
-		overflow-x: scroll;
-		overflow-y: hidden;
-		width: 100%;
-	}
-	&__both .#{$scroll-ns}__content-container {
-		height: 100%;
-		overflow: scroll;
-		width: 100%;
-	}
 
 	&-dragging {
 		cursor: initial !important;
@@ -72,13 +62,6 @@ $scroll-width-transition: width 0.15s linear 0.25s;
 			top: 0;
 			width: 100%;
 		}
-
-		&-horizontal {
-			height: 100%;
-			left: 0;
-			min-width: $scroll-thumb-min-size;
-			padding: 0 $scroll-border-radius;
-		}
     }
 
     // Track (clickable background)
@@ -109,31 +92,7 @@ $scroll-width-transition: width 0.15s linear 0.25s;
 				width: $scroll-track-size;
 			}
 		}
-		&-horizontal {
-			bottom: 0;
-			height: $scroll-track-size - 4;
-			left: 0;
-			transition: background-color 0.25s linear, height 0.3s linear;
-			right: 0;
-
-			// Since the track has "pointer-events: none", a class gets added for the
-			// "hover" state
-			&.#{$scroll-ns}-is-hovered {
-				height: $scroll-track-size;
-			}
-		}
     }
-
-	// If we have to display tracks for both dimensions, we need to create some space
-	// so that they don't overlap in the bottom-right corner
-	&__both {
-		&__track-vertical {
-			bottom: $scroll-track-size;
-		}
-		&__track-horizontal {
-			right: $scroll-track-size;
-		}
-	}
 }
 
 .#{$scroll-ns}__lock-scroll {

@@ -7,7 +7,7 @@ import classnames from 'classnames';
 /**
  * Internal Dependencies
  */
-import { BASE_CLASS } from './constants';
+import { BASE_CLASS } from './helpers/constants';
 
 export default class ScrollTrack extends PureComponent {
 	render() {
