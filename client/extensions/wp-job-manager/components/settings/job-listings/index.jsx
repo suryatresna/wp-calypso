@@ -24,12 +24,12 @@ import SectionHeader from 'components/section-header';
 const JobListings = ( { isSaving, perPage, translate } ) => {
 	return (
 		<div>
-			<SectionHeader label={ translate( 'Listings' ) }>
-				<FormButton compact
-					isSubmitting={ isSaving } />
-			</SectionHeader>
-			<Card>
-				<form>
+			<form>
+				<SectionHeader label={ translate( 'Listings' ) }>
+					<FormButton compact
+						isSubmitting={ isSaving } />
+				</SectionHeader>
+				<Card>
 					<p>
 						{ translate(
 							'Display {{listings /}} job listing per page',
@@ -72,15 +72,15 @@ const JobListings = ( { isSaving, perPage, translate } ) => {
 								'minus the application area.' ) }
 						</FormSettingExplanation>
 					</FormFieldset>
-				</form>
-			</Card>
+				</Card>
+			</form>
 
-			<SectionHeader label={ translate( 'Categories' ) }>
-				<FormButton compact
-					isSubmitting={ isSaving } />
-			</SectionHeader>
-			<Card>
-				<form>
+			<form>
+				<SectionHeader label={ translate( 'Categories' ) }>
+					<FormButton compact
+						isSubmitting={ isSaving } />
+				</SectionHeader>
+				<Card>
 					<FormFieldset>
 						<ReduxFormToggle
 							name="job_manager_enable_categories"
@@ -125,15 +125,15 @@ const JobListings = ( { isSaving, perPage, translate } ) => {
 							</span>
 						</FormLabel>
 					</FormFieldset>
-				</form>
-			</Card>
+				</Card>
+			</form>
 
-			<SectionHeader label={ translate( 'Types' ) }>
-				<FormButton compact
-					isSubmitting={ isSaving } />
-			</SectionHeader>
-			<Card>
-				<form>
+			<form>
+				<SectionHeader label={ translate( 'Types' ) }>
+					<FormButton compact
+						isSubmitting={ isSaving } />
+				</SectionHeader>
+				<Card>
 					<FormFieldset>
 						<ReduxFormToggle
 							name="job_manager_enable_types"
@@ -152,15 +152,15 @@ const JobListings = ( { isSaving, perPage, translate } ) => {
 								'submission form will both reflect this.' ) }
 						</FormSettingExplanation>
 					</FormFieldset>
-				</form>
-			</Card>
+				</Card>
+			</form>
 
-			<SectionHeader label={ translate( 'Date Format' ) }>
-				<FormButton compact
-					isSubmitting={ isSaving } />
-			</SectionHeader>
-			<Card>
-				<form>
+			<form>
+				<SectionHeader label={ translate( 'Date Format' ) }>
+					<FormButton compact
+						isSubmitting={ isSaving } />
+				</SectionHeader>
+				<Card>
 					<FormFieldset>
 						<FormSettingExplanation>
 							{ translate( 'Choose how you want the published date for jobs to be displayed on the front-end.' ) }
@@ -183,15 +183,15 @@ const JobListings = ( { isSaving, perPage, translate } ) => {
 							</span>
 						</FormLabel>
 					</FormFieldset>
-				</form>
-			</Card>
+				</Card>
+			</form>
 
-			<SectionHeader label={ translate( 'Google Maps API Key' ) }>
-				<FormButton compact
-					isSubmitting={ isSaving } />
-			</SectionHeader>
-			<Card>
-				<form>
+			<form>
+				<SectionHeader label={ translate( 'Google Maps API Key' ) }>
+					<FormButton compact
+						isSubmitting={ isSaving } />
+				</SectionHeader>
+				<Card>
 					<FormFieldset>
 						<ReduxFormTextInput name="job_manager_google_maps_api_key" />
 						<FormSettingExplanation>
@@ -212,8 +212,8 @@ const JobListings = ( { isSaving, perPage, translate } ) => {
 							) }
 						</FormSettingExplanation>
 					</FormFieldset>
-				</form>
-			</Card>
+				</Card>
+			</form>
 		</div>
 	);
 };
