@@ -39,12 +39,7 @@ menuItems.push( {
 	cmd: 'wpcomContactForm'
 } );
 
-if ( config.isEnabled( 'simple-payments' ) ) {
-	menuItems.push( {
-		name: 'insert_payment_button',
-		item: <GridiconButton icon="money" label={ i18n.translate( 'Add Payment Button' ) } />,
-		cmd: 'simplePaymentsButton'
-	} );
-}
-
-export default menuItems;
+export default {
+	GridiconButton,
+	menuItems,
+};
