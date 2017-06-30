@@ -16,9 +16,38 @@ import { isEnabled } from 'config';
 import { FEATURE_SIMPLE_PAYMENTS } from 'lib/plans/constants';
 import { hasFeature } from 'state/sites/plans/selectors';
 
-import { menuItems, GridiconButton } from './menu-items';
+/* eslint-disable wpcalypso/jsx-classname-namespace */
+const GridiconButton = ( { icon, label } ) => (
+	<div>
+		<Gridicon className="wpcom-insert-menu__menu-icon" icon={ icon } />
+		<span className="wpcom-insert-menu__menu-label">{ label }</span>
+	</div>
+);
+/* eslint-enable wpcalypso/jsx-classname-namespace */
 
 const initialize = editor => {
+	const menuItems = [ {
+		name: 'insert_media_item',
+		item: <GridiconButton icon="add-image" label={ i18n.translate( 'Add Media' ) } />,
+		cmd: 'wpcomAddMedia'
+	} ];
+
+	if ( isEnabled( 'external-media' ) ) {
+		menuItems.push( {
+			name: 'insert_from_google',
+			item: <GridiconButton icon="add-image" label={ i18n.translate( 'Add from Google' ) } />,
+			cmd: 'googleAddMedia'
+		} );
+	}
+
+	menuItems.push( {
+		name: 'insert_contact_form',
+		item: <GridiconButton icon="mention" label={ i18n.translate( 'Add Contact Form' ) } />,
+		cmd: 'wpcomContactForm'
+	} );
+
+	// This needs to be called inside `initialize` each time an Editor is initialized because
+	// Simple Payments might not be enabled for all types of subscriptions.
 	if ( isEnabled( 'simple-payments' ) ) {
 		const store = editor.getParam( 'redux_store' );
 
