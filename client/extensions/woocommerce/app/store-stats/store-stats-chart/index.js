@@ -68,7 +68,7 @@ class StoreStatsChart extends Component {
 		return this.getDeltasBySelectedPeriod()[ stat ];
 	};
 
-	getSelectedIndex = data => {
+	getSelectedIndex = ( data ) => {
 		return findIndex( data, d => d.period === this.props.selectedDate );
 	};
 

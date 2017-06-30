@@ -119,6 +119,7 @@ function parseOrderDeltas( payload ) {
 
 	const response = [];
 
+	// const t0 = performance.now();
 	forEach( payload.deltas, ( values, stat ) => {
 		values.forEach( row => {
 			const periodIndex = findIndex( response, ( item ) => {
@@ -141,6 +142,9 @@ function parseOrderDeltas( payload ) {
 			}
 		} );
 	} );
+
+	// const t1 = performance.now();
+	// console.log("Call to doSomething took " + (t1 - t0) + " milliseconds.");
 
 	return response;
 }
@@ -244,7 +248,6 @@ function parseChartData( payload, nullAttributes = [] ) {
 				dataRecord.labelYear = localizedDate.format( 'YYYY' );
 			}
 		}
-
 		return dataRecord;
 	} );
 }

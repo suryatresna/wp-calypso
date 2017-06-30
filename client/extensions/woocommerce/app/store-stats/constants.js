@@ -3,6 +3,36 @@
  */
 import { translate } from 'i18n-calypso';
 
+export const sparkWidgetList1 = [
+	{
+		key: 'products',
+		title: translate( 'Products Purchased' )
+	},
+	{
+		key: 'avg_products_per_order',
+		title: translate( 'Products Per Order' )
+	},
+	{
+		key: 'coupons',
+		title: translate( 'Coupons Used' )
+	}
+];
+
+export const sparkWidgetList2 = [
+	{
+		key: 'total_refund',
+		title: translate( 'Refunds' )
+	},
+	{
+		key: 'total_shipping',
+		title: translate( 'Shipping' )
+	},
+	{
+		key: 'total_tax',
+		title: translate( 'Tax' )
+	}
+];
+
 export const topProducts = {
 	basePath: '/store/stats/products',
 	title: translate( 'Products' ),
