@@ -85,7 +85,8 @@ export function serverRender( req, res ) {
 	if (
 		config.isEnabled( 'server-side-rendering' ) &&
 		context.layout &&
-		! context.user
+		! context.user &&
+		isDefaultLocale( context.lang ) // localized SSR is currently disabled
 	) {
 		// context.pathname doesn't include querystring, so it's a suitable cache key.
 		let key = context.pathname;
