@@ -83,6 +83,9 @@ const user = require( 'lib/user' )(),
 	config = require( 'config' );
 import { decodeEntities, wpautop, removep } from 'lib/formatting';
 
+import QuerySitePlans from 'components/data/query-site-plans';
+import { getSelectedSiteId } from 'state/ui/selectors';
+
 /**
  * Internal Variables
  */
@@ -491,6 +494,11 @@ module.exports = React.createClass( {
 			'is-visible': mode === 'html'
 		} );
 
+		const store = this.context.store;
+		const state = store.getState();
+
+		const siteId = getSelectedSiteId( state );
+
 		return (
 			<div>
 				{ 'html' === mode && config.isEnabled( 'post-editor/html-toolbar' ) &&
@@ -499,6 +507,7 @@ module.exports = React.createClass( {
 						onToolbarChangeContent={ this.onToolbarChangeContent }
 					/>
 				}
+				{ siteId && <QuerySitePlans siteId={ siteId } /> }
 				<textarea
 					ref="text"
 					className={ className }
