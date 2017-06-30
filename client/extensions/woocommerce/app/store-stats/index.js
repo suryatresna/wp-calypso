@@ -59,11 +59,6 @@ class StoreStats extends Component {
 			date: unitSelectedDate,
 			limit: 10,
 		};
-		// console.log(`queryDate ${ queryDate }`);
-		// console.log(`unitQueryDate ${ unitQueryDate }`);
-		// console.log(`selectedDate ${ selectedDate }`);
-		// console.log(`unitSelectedDate ${ unitSelectedDate }`);
-		// console.log(`endSelectedDate ${ endSelectedDate }`);
 		const topWidgets = [ topProducts, topCategories, topCoupons ];
 		const widgetPath = `/${ unit }/${ slug }${ querystring ? '?' : '' }${ querystring || '' }`;
 

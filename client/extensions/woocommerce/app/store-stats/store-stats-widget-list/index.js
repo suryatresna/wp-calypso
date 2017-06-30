@@ -23,6 +23,7 @@ import StatsModulePlaceholder from 'my-sites/stats/stats-module/placeholder';
 import ErrorPanel from 'my-sites/stats/stats-error';
 import Sparkline from '../../../components/sparkline';
 import Delta from '../../../components/delta';
+import { parseUnitPeriods } from 'state/stats/lists/utils';
 
 class StoreStatsWidgetList extends Component {
 
@@ -57,12 +58,19 @@ class StoreStatsWidgetList extends Component {
 	};
 
 	getDeltasBySelectedPeriod = () => {
-		return find( this.props.data.deltas, ( item ) => item.period === this.props.selectedDate );
+		return find( this.props.data.deltas, ( item ) =>
+			item.period === this.props.selectedDate
+		);
 	};
 
 	getDeltaByStat = ( stat ) => {
 		return this.getDeltasBySelectedPeriod()[ stat ];
 	};
+
+	getDeltaSincePeriod = () => {
+		const delta = this.getDeltasBySelectedPeriod();
+		return parseUnitPeriods( Object.keys( delta )[ 0 ].reference_period );
+	}
 
 	getSelectedIndex = ( data ) => {
 		return findIndex( data, d => d.period === this.props.selectedDate );
@@ -74,29 +82,31 @@ class StoreStatsWidgetList extends Component {
 		const { loaded } = this.state;
 		const isLoading = ! loaded && ! ( data && data.length );
 		const hasEmptyData = loaded && data && data.length === 0;
-		const values = [
-			{
-				key: 'title',
-				label: translate( 'Stat' )
-			},
-			{
-				key: 'value',
-				label: translate( 'Value' )
-			},
-			{
-				key: 'sparkline',
-				label: translate( 'Trend' )
-			},
-			{
-				key: 'delta',
-				label: translate( 'Since ___' )
-			}
-		];
+		let values = [];
 		let titles = null;
 		let widgetData = null;
 		let widgetList = null;
 
 		if ( ! isLoading && ! hasEmptyData ) {
+			values = [
+				{
+					key: 'title',
+					label: translate( 'Stat' )
+				},
+				{
+					key: 'value',
+					label: translate( 'Value' )
+				},
+				{
+					key: 'sparkline',
+					label: translate( 'Trend' )
+				},
+				{
+					key: 'delta',
+					label: `${ translate( 'Since' ) } ${ this.getDeltaSincePeriod().format( 'MMM D' ) }`
+				}
+			];
+
 			titles = (
 				<TableRow isHeader>
 					{ values.map( ( value, i ) => {
