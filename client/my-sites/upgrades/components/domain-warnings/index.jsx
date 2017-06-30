@@ -56,7 +56,8 @@ export default React.createClass( {
 		};
 	},
 
-	renewLink( count ) {
+	renewLink( domains ) {
+		const count = domains.length;
 		const fullMessage = this.translate(
 			'Renew it now.',
 			'Renew them now.',
@@ -64,10 +65,14 @@ export default React.createClass( {
 				count,
 				context: 'Call to action link for renewing an expiring/expired domain'
 			}
-		),
-			compactMessage = this.translate( 'Renew', { context: 'Call to action link for renewing an expiring/expired domain' } );
+		);
+		const compactMessage = this.translate( 'Renew', { context: 'Call to action link for renewing an expiring/expired domain' } );
+		let url = purchasesPaths.purchasesRoot();
+		if ( 1 === count ) {
+			url = `/checkout/domain_map:${ domains[ 0 ] }/renew/1/${ this.props.selectedSite.slug }`;
+		}
 		return (
-			<NoticeAction href={ purchasesPaths.purchasesRoot() }>
+			<NoticeAction href={ url }>
 				{ this.props.isCompact ? compactMessage : fullMessage }
 			</NoticeAction>
 		);
@@ -173,7 +178,7 @@ export default React.createClass( {
 		let text;
 		const expiredDomains = this.getDomains()
 				.filter( domain => domain.expired && domain.type === domainTypes.REGISTERED && domain.currentUserCanManage ),
-			renewLink = this.renewLink( expiredDomains.length );
+			renewLink = this.renewLink( expiredDomains.map( domain => domain.name ) );
 
 		if ( expiredDomains.length === 0 ) {
 			return null;
@@ -244,7 +249,7 @@ export default React.createClass( {
 		let text;
 		const expiringDomains = this.getDomains()
 				.filter( domain => domain.expirySoon && domain.type === domainTypes.REGISTERED && domain.currentUserCanManage ),
-			renewLink = this.renewLink( expiringDomains.length );
+			renewLink = this.renewLink( expiringDomains.map( domain => domain.name ) );
 
 		if ( expiringDomains.length === 0 ) {
 			return null;
