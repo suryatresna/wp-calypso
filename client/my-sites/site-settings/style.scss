@@ -200,6 +200,10 @@
 			@include placeholder;
 		}
 	}
+
+	.site.is-compact .site__content {
+		padding: 0;
+	}
 }
 
 .site-settings__general-settings,
