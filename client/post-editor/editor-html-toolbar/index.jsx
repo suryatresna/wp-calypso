@@ -25,7 +25,10 @@ import MediaValidationStore from 'lib/media/validation-store';
 import PostActions from 'lib/posts/actions';
 import { isWithinBreakpoint } from 'lib/viewport';
 import markup from 'post-editor/media-modal/markup';
-import { getSelectedSite } from 'state/ui/selectors';
+import {
+	getSelectedSite,
+	getSelectedSiteId,
+} from 'state/ui/selectors';
 import {
 	fieldAdd,
 	fieldRemove,
@@ -39,6 +42,8 @@ import ContactFormDialog from 'components/tinymce/plugins/contact-form/dialog';
 import EditorMediaModal from 'post-editor/editor-media-modal';
 import MediaLibraryDropZone from 'my-sites/media-library/drop-zone';
 import config from 'config';
+import { FEATURE_SIMPLE_PAYMENTS } from 'lib/plans/constants';
+import { hasFeature } from 'state/sites/plans/selectors';
 
 /**
  * Module constant
@@ -475,9 +480,12 @@ export class EditorHtmlToolbar extends Component {
 	}
 
 	renderSimplePaymentsButton() {
-		const { translate } = this.props;
+		const {
+			hasSimplePaymentsFeature,
+			translate,
+		} = this.props;
 
-		if ( ! config.isEnabled( 'simple-payments' ) ) {
+		if ( ! config.isEnabled( 'simple-payments' ) || ! hasSimplePaymentsFeature ) {
 			return null;
 		}
 
@@ -661,10 +669,15 @@ export class EditorHtmlToolbar extends Component {
 	}
 }
 
-const mapStateToProps = state => ( {
-	contactForm: get( state, 'ui.editor.contactForm', {} ),
-	site: getSelectedSite( state ),
-} );
+const mapStateToProps = state => {
+	const siteId = getSelectedSiteId( state );
+
+	return {
+		contactForm: get( state, 'ui.editor.contactForm', {} ),
+		site: getSelectedSite( state ),
+		hasSimplePaymentsFeature: hasFeature( state, siteId, FEATURE_SIMPLE_PAYMENTS ),
+	};
+};
 
 const mapDispatchToProps = {
 	fieldAdd,
